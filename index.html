@@ -1,0 +1,25 @@
+<button onclick="sendData()">
+送信
+</button>
+
+<script>
+const API_URL = "https://script.googleapis.com/v1/scripts/AKfycbxla_Xc_iWTvgxzX4FLte_F-S20mJsh_n6UQyyABpSr0acBLhesccgyiXLH7RZIpZ-9:run";
+
+async function sendData() {
+
+  const data = {
+    sheet: "tickets",
+    startTime: "600",
+    endTime "750"
+  };
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+
+  const json = await res.json();
+
+  console.log(json);
+}
+</script>
