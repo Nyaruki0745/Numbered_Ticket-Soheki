@@ -1,5 +1,856 @@
-<script　src = "send.js" ></script>
-<button onclick="sendData()">
-送信
-</button>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>整理券システム</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ===== アプリ固有スタイル ===== */
 
+#app { max-width: 560px; margin: 0 auto; padding: 1rem 1rem 4rem; }
+
+/* ヘッダー */
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.25rem;
+}
+#header h1 { font-size: 1.1rem; }
+#header .session-info {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-size: 0.8rem; color: var(--text2);
+}
+#header .sheet-badge {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* ===== ログイン画面 ===== */
+#login-screen {
+  min-height: 80vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0;
+}
+#login-screen .logo {
+  font-size: 2.5rem;
+  margin-bottom: 0.25rem;
+}
+#login-screen h2 {
+  font-size: 1.3rem; font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+#login-screen .sub {
+  color: var(--text2); font-size: 0.85rem;
+  margin-bottom: 2rem;
+}
+#login-form {
+  width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+#pw-display {
+  display: flex; gap: 0.5rem; justify-content: center;
+}
+.pw-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--border2);
+  transition: background 0.15s, border-color 0.15s;
+}
+.pw-dot.filled { background: var(--accent); border-color: var(--accent); }
+.pw-dot.error  { background: var(--danger); border-color: var(--danger); }
+
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.numpad-btn {
+  aspect-ratio: 1.4;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s, transform 0.1s;
+  display: flex; align-items: center; justify-content: center;
+}
+.numpad-btn:hover { background: var(--bg2); border-color: var(--accent); }
+.numpad-btn:active { transform: scale(0.94); }
+.numpad-btn.del { font-size: 1rem; color: var(--text2); }
+
+/* ===== タブナビ ===== */
+.tabs {
+  display: flex; gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.25rem;
+}
+.tab-btn {
+  padding: 0.55rem 1rem;
+  font-size: 0.88rem; font-weight: 600;
+  color: var(--text2);
+  background: none; border: none; cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s;
+  margin-bottom: -1px;
+}
+.tab-btn.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.tab-btn:hover:not(.active) { color: var(--text); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ===== 登録タブ ===== */
+#result-box {
+  margin-top: 1.25rem;
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  text-align: center;
+  display: none;
+}
+#result-box.show { display: block; }
+#result-number {
+  font-family: var(--font-mono);
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+#result-detail { font-size: 0.82rem; color: var(--text2); line-height: 1.8; }
+
+/* ===== 受付タブ ===== */
+#ticket-input-wrap {
+  position: relative;
+  margin-bottom: 1rem;
+}
+#ticket-input-wrap input {
+  padding-right: 3rem;
+}
+#qr-btn {
+  position: absolute;
+  right: 0.5rem; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  color: var(--text2); font-size: 1.3rem;
+  padding: 0.3rem;
+  transition: color 0.15s;
+}
+#qr-btn:hover { color: var(--accent); }
+
+#ticket-result {
+  display: none;
+  margin-top: 1rem;
+}
+#ticket-result.show { display: block; }
+.ticket-info {
+  background: var(--bg3);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  margin-bottom: 1rem;
+}
+.ticket-info .row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.3rem 0;
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--border);
+}
+.ticket-info .row:last-child { border-bottom: none; }
+.ticket-info .row .key { color: var(--text2); }
+.ticket-info .row .val { font-family: var(--font-mono); font-weight: 600; }
+
+.status-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+/* ===== 統計タブ ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.stat-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+.stat-card .num {
+  font-size: 2rem; font-weight: 800;
+  font-family: var(--font-mono);
+  line-height: 1.1;
+  margin-bottom: 0.3rem;
+}
+.stat-card .lbl { font-size: 0.75rem; color: var(--text2); }
+
+/* QRスキャナーモーダル */
+#qr-modal .modal { max-width: 380px; }
+#qr-video-wrap {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 1rem 0;
+  position: relative;
+}
+#qr-video { width: 100%; height: 100%; object-fit: cover; }
+.qr-crosshair {
+  position: absolute; inset: 20%;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
+}
+
+/* モニターへのリンク */
+.monitor-link {
+  display: flex; align-items: center; gap: 0.5rem;
+  color: var(--text2); font-size: 0.82rem;
+  text-decoration: none;
+  padding: 0.5rem 0;
+}
+.monitor-link:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div id="login-screen">
+  <div class="logo">🎫</div>
+  <h2 id="app-title-login">整理券システム</h2>
+  <p class="sub">シートを選択してパスワードを入力してください</p>
+
+  <div id="login-form">
+    <!-- シート選択 -->
+    <div class="field">
+      <label for="sheet-select">シート選択</label>
+      <select id="sheet-select"></select>
+    </div>
+
+    <!-- パスワード表示 -->
+    <div class="field">
+      <label>パスワード（4桁）</label>
+      <div id="pw-display">
+        <div class="pw-dot" id="dot0"></div>
+        <div class="pw-dot" id="dot1"></div>
+        <div class="pw-dot" id="dot2"></div>
+        <div class="pw-dot" id="dot3"></div>
+      </div>
+    </div>
+
+    <!-- 数字パッド -->
+    <div class="numpad" id="numpad">
+      <button class="numpad-btn" data-n="1">1</button>
+      <button class="numpad-btn" data-n="2">2</button>
+      <button class="numpad-btn" data-n="3">3</button>
+      <button class="numpad-btn" data-n="4">4</button>
+      <button class="numpad-btn" data-n="5">5</button>
+      <button class="numpad-btn" data-n="6">6</button>
+      <button class="numpad-btn" data-n="7">7</button>
+      <button class="numpad-btn" data-n="8">8</button>
+      <button class="numpad-btn" data-n="9">9</button>
+      <button class="numpad-btn del" id="numpad-clear">CLR</button>
+      <button class="numpad-btn" data-n="0">0</button>
+      <button class="numpad-btn del" id="numpad-del">⌫</button>
+    </div>
+
+    <p id="login-error" class="text-danger" style="font-size:0.85rem;text-align:center;min-height:1.2em;"></p>
+  </div>
+</div>
+
+<!-- メインアプリ（ログイン後） -->
+<div id="main-app" style="display:none;">
+  <div id="app">
+
+    <!-- ヘッダー -->
+    <div id="header">
+      <h1 id="app-title">🎫 整理券</h1>
+      <div class="session-info">
+        <span class="sheet-badge" id="header-sheet"></span>
+        <button class="btn btn-ghost btn-sm" id="logout-btn">ログアウト</button>
+      </div>
+    </div>
+
+    <!-- タブナビ -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="register">登録</button>
+      <button class="tab-btn" data-tab="checkin">受付</button>
+      <button class="tab-btn" data-tab="stats">統計</button>
+    </div>
+
+    <!-- ===== 登録タブ ===== -->
+    <div id="tab-register" class="tab-panel active">
+      <div class="card">
+        <h2 style="margin-bottom:1rem;">整理券を発行する</h2>
+        <div style="display:flex; flex-direction:column; gap:0.9rem;">
+
+          <div class="field">
+            <label for="reg-count">人数</label>
+            <input type="number" id="reg-count" min="1" max="99" value="1" placeholder="人数">
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="reg-start">開始時間</label>
+              <input type="time" id="reg-start">
+            </div>
+            <div class="field">
+              <label for="reg-end">終了時間</label>
+              <input type="time" id="reg-end">
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-lg" id="reg-submit" style="margin-top:0.5rem;">
+            整理券を発行
+          </button>
+        </div>
+      </div>
+
+      <!-- 発行結果 -->
+      <div id="result-box">
+        <div style="font-size:0.8rem; color:var(--text2); margin-bottom:0.5rem;">整理番号</div>
+        <div id="result-number">—</div>
+        <div id="result-detail"></div>
+        <button class="btn btn-ghost btn-sm" id="result-clear" style="margin-top:1rem;">閉じる</button>
+      </div>
+
+      <div style="margin-top:1.5rem;">
+        <a href="monitor.html" target="_blank" class="monitor-link">
+          ↗ 呼出モニターを開く
+        </a>
+      </div>
+    </div>
+
+    <!-- ===== 受付タブ ===== -->
+    <div id="tab-checkin" class="tab-panel">
+      <div class="card">
+        <h2 style="margin-bottom:1rem;">整理券を確認する</h2>
+
+        <div class="field" style="margin-bottom:1rem;">
+          <label for="ticket-input">整理番号</label>
+          <div id="ticket-input-wrap">
+            <input type="text" id="ticket-input" class="large"
+              placeholder="A01-0001"
+              autocomplete="off" spellcheck="false"
+              maxlength="8"
+              style="text-transform:uppercase;">
+            <button id="qr-btn" title="QRスキャン">📷</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="checkin-lookup" style="width:100%;">照合する</button>
+      </div>
+
+      <!-- 照合結果 -->
+      <div id="ticket-result">
+        <div class="ticket-info">
+          <div class="row"><span class="key">整理番号</span><span class="val" id="tr-number">—</span></div>
+          <div class="row"><span class="key">人数</span><span class="val" id="tr-count">—</span></div>
+          <div class="row"><span class="key">時間</span><span class="val" id="tr-time">—</span></div>
+          <div class="row"><span class="key">ステータス</span><span id="tr-status">—</span></div>
+          <div class="row"><span class="key">失効時刻</span><span class="val" id="tr-expire">—</span></div>
+        </div>
+
+        <div class="status-actions" id="status-actions">
+          <!-- ステータスボタンはJSで動的生成 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 統計タブ ===== -->
+    <div id="tab-stats" class="tab-panel">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+        <h2>統計</h2>
+        <button class="btn btn-ghost btn-sm" id="stats-refresh">更新</button>
+      </div>
+
+      <div class="stats-grid" id="stats-grid">
+        <!-- JSで生成 -->
+      </div>
+
+      <p style="font-size:0.78rem; color:var(--text3); text-align:right;" id="stats-updated"></p>
+    </div>
+
+  </div><!-- /app -->
+</div><!-- /main-app -->
+
+<!-- トースト -->
+<div id="toast-container"></div>
+
+<!-- QRスキャナーモーダル -->
+<div class="overlay hidden" id="qr-modal">
+  <div class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>QRコードをスキャン</h2>
+      <button class="btn btn-ghost btn-sm" id="qr-close">閉じる</button>
+    </div>
+    <div id="qr-video-wrap">
+      <video id="qr-video" playsinline muted></video>
+      <div class="qr-crosshair"></div>
+    </div>
+    <p style="font-size:0.82rem; color:var(--text2); text-align:center;">
+      QRコードをカメラに向けてください
+    </p>
+  </div>
+</div>
+
+<!-- 外部ライブラリ（QRスキャン） -->
+<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+
+<!-- アプリ設定・API -->
+<script src="config.js"></script>
+<script src="js/api.js"></script>
+
+<!-- メインロジック -->
+<script>
+// ============================================================
+// 初期化
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  document.title = CONFIG.APP_TITLE;
+  document.getElementById('app-title-login').textContent = CONFIG.APP_TITLE;
+  document.getElementById('app-title').textContent = '🎫 ' + CONFIG.APP_TITLE;
+  buildSheetSelect();
+  buildNumpad();
+});
+
+// シート選択プルダウン生成
+function buildSheetSelect() {
+  const sel = document.getElementById('sheet-select');
+  sel.innerHTML = '';
+  CONFIG.SHEETS.forEach((s, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = s.label;
+    sel.appendChild(opt);
+  });
+}
+
+// ============================================================
+// ログイン（数字パッド）
+// ============================================================
+let pwBuffer = '';
+
+function buildNumpad() {
+  document.querySelectorAll('.numpad-btn[data-n]').forEach(btn => {
+    btn.addEventListener('click', () => addDigit(btn.dataset.n));
+  });
+  document.getElementById('numpad-del').addEventListener('click', () => {
+    pwBuffer = pwBuffer.slice(0, -1);
+    renderDots();
+  });
+  document.getElementById('numpad-clear').addEventListener('click', () => {
+    pwBuffer = '';
+    renderDots();
+  });
+}
+
+function addDigit(d) {
+  if (pwBuffer.length >= 4) return;
+  pwBuffer += d;
+  renderDots();
+  if (pwBuffer.length === 4) attemptLogin();
+}
+
+function renderDots(state = 'normal') {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('dot' + i);
+    dot.className = 'pw-dot';
+    if (state === 'error') { dot.classList.add('error'); }
+    else if (i < pwBuffer.length) { dot.classList.add('filled'); }
+  }
+}
+
+async function attemptLogin() {
+  const idx = parseInt(document.getElementById('sheet-select').value, 10);
+  const sheet = CONFIG.SHEETS[idx];
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+
+  // ローカルPW確認
+  if (pwBuffer !== sheet.password) {
+    renderDots('error');
+    errEl.textContent = 'パスワードが違います';
+    setTimeout(() => { pwBuffer = ''; renderDots(); errEl.textContent = ''; }, 1200);
+    return;
+  }
+
+  // GAS認証
+  try {
+    await API.auth(sheet.sheetName, sheet.password);
+    API.setSession(sheet);
+    showMainApp();
+  } catch (e) {
+    renderDots('error');
+    errEl.textContent = 'サーバー認証に失敗しました: ' + e.message;
+    setTimeout(() => { pwBuffer = ''; renderDots(); errEl.textContent = ''; }, 2000);
+  }
+}
+
+function showMainApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  const session = API.getSession();
+  document.getElementById('header-sheet').textContent = session.label;
+  loadStats();
+}
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+  API.clearSession();
+  pwBuffer = '';
+  renderDots();
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-error').textContent = '';
+});
+
+// ============================================================
+// タブ切替
+// ============================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'stats') loadStats();
+  });
+});
+
+// ============================================================
+// 登録タブ
+// ============================================================
+document.getElementById('reg-submit').addEventListener('click', async () => {
+  const count = parseInt(document.getElementById('reg-count').value, 10);
+  const start = document.getElementById('reg-start').value;
+  const end   = document.getElementById('reg-end').value;
+
+  if (!count || count < 1) { toast('人数を入力してください', 'error'); return; }
+  if (!start) { toast('開始時間を入力してください', 'error'); return; }
+  if (!end)   { toast('終了時間を入力してください', 'error'); return; }
+  if (start >= end) { toast('終了時間は開始時間より後にしてください', 'error'); return; }
+
+  const btn = document.getElementById('reg-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 発行中...';
+
+  try {
+    const res = await API.register(count, start, end);
+    showResult(res.ticketNumber, count, start, end, res.expireTime);
+    toast('整理券を発行しました！', 'success');
+  } catch (e) {
+    toast('発行に失敗しました: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '整理券を発行';
+  }
+});
+
+function showResult(number, count, start, end, expireTime) {
+  document.getElementById('result-number').textContent = number;
+  document.getElementById('result-detail').innerHTML =
+    `${count}名 ／ ${start}〜${end}<br>` +
+    `<span style="color:var(--text3);font-size:0.78rem;">失効: ${expireTime || '—'}</span>`;
+  const box = document.getElementById('result-box');
+  box.classList.add('show');
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+document.getElementById('result-clear').addEventListener('click', () => {
+  document.getElementById('result-box').classList.remove('show');
+});
+
+// ============================================================
+// 受付タブ
+// ============================================================
+// 整理番号入力の自動フォーマット (A01 → A01-|)
+document.getElementById('ticket-input').addEventListener('input', function() {
+  let v = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (v.length > 3) v = v.slice(0,3) + '-' + v.slice(3,7);
+  this.value = v;
+});
+
+// Enterで照合
+document.getElementById('ticket-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('checkin-lookup').click();
+});
+
+document.getElementById('checkin-lookup').addEventListener('click', async () => {
+  const num = document.getElementById('ticket-input').value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{3}-[0-9]{4}$/.test(num)) {
+    toast('整理番号の形式が正しくありません（例: A01-0001）', 'error');
+    return;
+  }
+  await lookupTicket(num);
+});
+
+let currentTicket = null;
+
+async function lookupTicket(ticketNumber) {
+  const btn = document.getElementById('checkin-lookup');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const res = await API.request !== undefined
+      ? await callLookup(ticketNumber)
+      : null;
+    showTicketResult(res);
+  } catch(e) {
+    toast('照合に失敗しました: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '照合する';
+  }
+}
+
+async function callLookup(ticketNumber) {
+  // API モジュール経由でGASに問い合わせ
+  const session = API.getSession();
+  const payload = {
+    action: 'lookup',
+    sheetName: session.sheetName,
+    password:  session.password,
+    ticketNumber
+  };
+  const res = await fetch(CONFIG.GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message || '見つかりません');
+  return data.ticket;
+}
+
+function showTicketResult(ticket) {
+  currentTicket = ticket;
+  const st = CONFIG.STATUSES[ticket.status] || { label: ticket.status, color: '' };
+
+  document.getElementById('tr-number').textContent = ticket.ticketNumber;
+  document.getElementById('tr-count').textContent  = ticket.count + '名';
+  document.getElementById('tr-time').textContent   = ticket.startTime + ' 〜 ' + ticket.endTime;
+  document.getElementById('tr-expire').textContent = ticket.expireTime || '—';
+
+  const stEl = document.getElementById('tr-status');
+  stEl.innerHTML = `<span class="badge ${st.color}">${st.label}</span>`;
+
+  buildStatusActions(ticket.status);
+
+  const result = document.getElementById('ticket-result');
+  result.classList.add('show');
+  result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ステータスに応じたアクションボタンを動的生成
+function buildStatusActions(currentStatus) {
+  const container = document.getElementById('status-actions');
+  container.innerHTML = '';
+
+  const actions = getAvailableActions(currentStatus);
+  actions.forEach(({ key, label, cls }) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn ' + cls;
+    btn.textContent = label + 'にする';
+    btn.addEventListener('click', () => changeStatus(key));
+    container.appendChild(btn);
+  });
+}
+
+function getAvailableActions(status) {
+  const map = {
+    reserved: [
+      { key: 'received', label: '受付済', cls: 'btn-success' },
+      { key: 'expired',  label: '失効',   cls: 'btn-danger'  }
+    ],
+    calling: [
+      { key: 'received', label: '受付済', cls: 'btn-success' },
+      { key: 'absent',   label: '不在',   cls: 'btn-ghost'   },
+      { key: 'expired',  label: '失効',   cls: 'btn-danger'  }
+    ],
+    received: [
+      { key: 'entered',  label: '入場済', cls: 'btn-success' },
+      { key: 'absent',   label: '不在',   cls: 'btn-ghost'   }
+    ],
+    entered:  [],
+    absent:   [
+      { key: 'received', label: '受付済', cls: 'btn-success' }
+    ],
+    expired:  []
+  };
+  return map[status] || [];
+}
+
+async function changeStatus(newStatus) {
+  if (!currentTicket) return;
+  try {
+    await API.updateStatus(currentTicket.ticketNumber, newStatus);
+    const st = CONFIG.STATUSES[newStatus];
+    toast(`${currentTicket.ticketNumber} を「${st.label}」に変更しました`, 'success');
+    // 表示を更新
+    currentTicket.status = newStatus;
+    const stEl = document.getElementById('tr-status');
+    stEl.innerHTML = `<span class="badge ${st.color}">${st.label}</span>`;
+    buildStatusActions(newStatus);
+  } catch(e) {
+    toast('変更に失敗しました: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// 統計タブ
+// ============================================================
+async function loadStats() {
+  const grid = document.getElementById('stats-grid');
+  grid.innerHTML = '<div style="color:var(--text2);font-size:0.85rem;">読み込み中...</div>';
+  try {
+    const res = await API.getStats();
+    renderStats(res.stats);
+  } catch(e) {
+    grid.innerHTML = `<div class="text-danger" style="font-size:0.85rem;">${e.message}</div>`;
+  }
+}
+
+function renderStats(stats) {
+  const order = ['total','reserved','calling','received','entered','absent','expired'];
+  const labels = {
+    total:    { label: '合計',   color: 'var(--text)'    },
+    reserved: { label: '予約済', color: '#6f9eff'        },
+    calling:  { label: '呼出中', color: '#f0c040'        },
+    received: { label: '受付済', color: '#34d399'        },
+    entered:  { label: '入場済', color: '#22c589'        },
+    absent:   { label: '不在',   color: '#8b91a8'        },
+    expired:  { label: '失効',   color: '#e5534b'        }
+  };
+
+  const grid = document.getElementById('stats-grid');
+  grid.innerHTML = '';
+  order.forEach(key => {
+    if (stats[key] === undefined) return;
+    const { label, color } = labels[key];
+    const div = document.createElement('div');
+    div.className = 'stat-card';
+    div.innerHTML = `
+      <div class="num" style="color:${color}">${stats[key]}</div>
+      <div class="lbl">${label}</div>
+    `;
+    grid.appendChild(div);
+  });
+
+  const now = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  document.getElementById('stats-updated').textContent = `最終更新: ${now}`;
+}
+
+document.getElementById('stats-refresh').addEventListener('click', loadStats);
+
+// ============================================================
+// QRスキャナー
+// ============================================================
+let qrStream = null;
+let qrAnimFrame = null;
+
+document.getElementById('qr-btn').addEventListener('click', openQrModal);
+document.getElementById('qr-close').addEventListener('click', closeQrModal);
+
+async function openQrModal() {
+  document.getElementById('qr-modal').classList.remove('hidden');
+  try {
+    qrStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    const video = document.getElementById('qr-video');
+    video.srcObject = qrStream;
+    await video.play();
+    scanQrFrame(video);
+  } catch(e) {
+    toast('カメラにアクセスできませんでした', 'error');
+    closeQrModal();
+  }
+}
+
+function closeQrModal() {
+  document.getElementById('qr-modal').classList.add('hidden');
+  if (qrAnimFrame) { cancelAnimationFrame(qrAnimFrame); qrAnimFrame = null; }
+  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+}
+
+function scanQrFrame(video) {
+  if (!qrStream) return;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  function tick() {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert'
+      });
+      if (code) {
+        handleQrResult(code.data);
+        return;
+      }
+    }
+    qrAnimFrame = requestAnimationFrame(tick);
+  }
+  qrAnimFrame = requestAnimationFrame(tick);
+}
+
+function handleQrResult(data) {
+  closeQrModal();
+  const val = data.trim().toUpperCase();
+
+  // QR_MODE: "common" の場合は共通QR確認のみ
+  if (CONFIG.QR_MODE === 'common') {
+    if (val === CONFIG.COMMON_QR_VALUE.toUpperCase()) {
+      toast('QRコード確認OK。整理番号を入力してください', 'info');
+    } else {
+      toast('このQRコードは対象外です', 'error');
+    }
+    return;
+  }
+
+  // QR_MODE: "number" の場合は整理番号として処理
+  if (/^[A-Z0-9]{3}-[0-9]{4}$/.test(val)) {
+    document.getElementById('ticket-input').value = val;
+    lookupTicket(val);
+  } else {
+    toast('QRコードの形式が認識できません: ' + val, 'error');
+  }
+}
+
+// ============================================================
+// トースト通知
+// ============================================================
+function toast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
+
+</body>
+</html>
