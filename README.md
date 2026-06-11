@@ -12,40 +12,6 @@ seiriken/
 └── js/
     └── api.js          # GAS通信モジュール
 ```
-
----
-
-## セットアップ手順
-
-### 1. config.js を編集する
-
-```js
-// GAS デプロイ後に発行される URL を貼り付ける
-GAS_URL: "https://script.google.com/macros/s/XXXXXXXX/exec",
-
-// シートごとに設定（シート名・識別コード・表示名・PW）
-SHEETS: [
-  { sheetName: "1日目_2組", code: "A01", label: "1日目 2組", password: "1234" },
-  ...
-],
-
-// 呼出の何分前に呼出リストに表示するか（0=開始ちょうど）
-CALL_BEFORE_MINUTES: 5,
-
-// 予約終了時間の何分後に失効するか（0=終了ちょうど）
-EXPIRE_AFTER_MINUTES: 10,
-```
-
-### 2. GitHub Pages にデプロイ
-
-1. このフォルダの中身をリポジトリの `docs/` または `root` に配置
-2. Settings → Pages → Source を `main` ブランチに設定
-3. `https://<username>.github.io/<repo>/` でアクセス確認
-
-### 3. GAS 側を設定してから URL を config.js に記入
-
-→ GAS の README を参照
-
 ---
 
 ## 各画面の使い方
