@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>呼出モニター</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ===== モニター固有スタイル ===== */
@@ -275,23 +276,21 @@ function startClock() {
 // ログイン
 // ============================================================
 document.getElementById('mon-login-btn').addEventListener('click', async () => {
-  const idx  = parseInt(document.getElementById('mon-sheet-select').value, 10);
-  const pw   = document.getElementById('mon-password').value;
+  const idx   = parseInt(document.getElementById('mon-sheet-select').value, 10);
+  const pw    = document.getElementById('mon-password').value;
   const sheet = CONFIG.SHEETS[idx];
   const errEl = document.getElementById('mon-login-error');
   errEl.textContent = '';
 
-  if (pw !== sheet.password) {
-    errEl.textContent = 'パスワードが違います';
-    return;
-  }
-
+  // PW照合はGAS側のスクリプトプロパティで行う（フロントにPWは保持しない）
   try {
-    await API.auth(sheet.sheetName, sheet.password);
-    API.setSession(sheet);
+    await API.auth(sheet.sheetName, pw);
+    API.setSession(sheet, pw);  // PWはメモリのみ
     startMonitor();
   } catch(e) {
-    errEl.textContent = 'サーバー認証に失敗しました: ' + e.message;
+    errEl.textContent = e.message.includes('認証失敗') || e.message.includes('正しくありません')
+      ? 'パスワードが違います'
+      : 'サーバーエラー: ' + e.message;
   }
 });
 
@@ -336,7 +335,7 @@ function buildSheetSelectorBar() {
     btn.textContent = s.label;
     btn.addEventListener('click', () => {
       activeSheetIdx = i;
-      API.setSession(CONFIG.SHEETS[i]);
+      // シート切替時は選択シートのセッションを更新（PWはシート切替ボタンを押さず再ログイン不要）
       updateSheetSelectorUI();
       fetchAndRender();
     });
@@ -364,7 +363,8 @@ async function fetchAndRender() {
 
   try {
     const sheet = CONFIG.SHEETS[activeSheetIdx];
-    const res = await API.getCallingList(sheet.sheetName, sheet.password);
+    // getCallingList はセッション内のPWを自動付与（api.js の _enteredPassword を使用）
+    const res = await API.getCallingList(sheet.sheetName, API.getSession()?._enteredPassword || '');
     renderCallingList(res.list || []);
     status.textContent = '接続中';
   } catch(e) {
