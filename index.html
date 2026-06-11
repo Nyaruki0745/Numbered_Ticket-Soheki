@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>整理券システム</title>
+<link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ===== アプリ固有スタイル ===== */
@@ -480,27 +481,21 @@ function renderDots(state = 'normal') {
 }
 
 async function attemptLogin() {
-  const idx = parseInt(document.getElementById('sheet-select').value, 10);
+  const idx   = parseInt(document.getElementById('sheet-select').value, 10);
   const sheet = CONFIG.SHEETS[idx];
   const errEl = document.getElementById('login-error');
   errEl.textContent = '';
 
-  // ローカルPW確認
-  if (pwBuffer !== sheet.password) {
-    renderDots('error');
-    errEl.textContent = 'パスワードが違います';
-    setTimeout(() => { pwBuffer = ''; renderDots(); errEl.textContent = ''; }, 1200);
-    return;
-  }
-
-  // GAS認証
+  // PW照合はGAS側のスクリプトプロパティで行う（フロントにPWは保持しない）
   try {
-    await API.auth(sheet.sheetName, sheet.password);
-    API.setSession(sheet);
+    await API.auth(sheet.sheetName, pwBuffer);
+    API.setSession(sheet, pwBuffer);  // PWはメモリのみ・リロードで消える
     showMainApp();
   } catch (e) {
     renderDots('error');
-    errEl.textContent = 'サーバー認証に失敗しました: ' + e.message;
+    errEl.textContent = e.message.includes('認証失敗') || e.message.includes('正しくありません')
+      ? 'パスワードが違います'
+      : 'サーバーエラー: ' + e.message;
     setTimeout(() => { pwBuffer = ''; renderDots(); errEl.textContent = ''; }, 2000);
   }
 }
@@ -610,35 +605,15 @@ async function lookupTicket(ticketNumber) {
   btn.innerHTML = '<span class="spinner"></span>';
 
   try {
-    const res = await API.request !== undefined
-      ? await callLookup(ticketNumber)
-      : null;
-    showTicketResult(res);
+    // API.lookup() がセッション内のPWを自動付与してGASに送る
+    const res = await API.lookup(ticketNumber);
+    showTicketResult(res.ticket);
   } catch(e) {
     toast('照合に失敗しました: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = '照合する';
   }
-}
-
-async function callLookup(ticketNumber) {
-  // API モジュール経由でGASに問い合わせ
-  const session = API.getSession();
-  const payload = {
-    action: 'lookup',
-    sheetName: session.sheetName,
-    password:  session.password,
-    ticketNumber
-  };
-  const res = await fetch(CONFIG.GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload)
-  });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.message || '見つかりません');
-  return data.ticket;
 }
 
 function showTicketResult(ticket) {
