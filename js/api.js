@@ -92,7 +92,8 @@ const API = (() => {
       count,
       startTime,
       endTime,
-      identCode: _session.code
+      identCode          : _session.code,
+      expireAfterMinutes : CONFIG.EXPIRE_AFTER_MINUTES,  // config.js から送信
     });
     // GASが返す: { success, ticketNumber, expireTime }
   }
