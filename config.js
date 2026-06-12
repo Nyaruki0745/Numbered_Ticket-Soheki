@@ -9,7 +9,7 @@ const CONFIG = {
   // GAS Web App エンドポイント
   // デプロイ後に取得したURLをここに貼り付ける
   // -------------------------------------------------------
-  GAS_URL: "https://script.google.com/macros/s/AKfycby8zmyXBOfoLdWxxWEfQgIzLIpqrODUHMkuLQdkrvg4Q3lzFPl6KXfJLQArJ5zgkyu3nw/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbybhxDtOnuS_WQLiOILFqApZdGoQBQABAgI5WB5HM4gvOe32Tw7Ld9qW5R7hxluW7DXwQ/exec",
 
   // -------------------------------------------------------
   // シート設定
