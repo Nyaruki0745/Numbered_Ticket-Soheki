@@ -310,12 +310,12 @@
 
           <div class="grid-2">
             <div class="field">
-              <label for="reg-start">開始時間</label>
-              <input type="time" id="reg-start">
+              <label for="reg-start">開始日時</label>
+              <input type="datetime-local" id="reg-start">
             </div>
             <div class="field">
-              <label for="reg-end">終了時間</label>
-              <input type="time" id="reg-end">
+              <label for="reg-end">終了日時</label>
+              <input type="datetime-local" id="reg-end">
             </div>
           </div>
 
@@ -562,11 +562,28 @@ document.getElementById('reg-submit').addEventListener('click', async () => {
 function showResult(number, count, start, end, expireTime) {
   document.getElementById('result-number').textContent = number;
   document.getElementById('result-detail').innerHTML =
-    `${count}名 ／ ${start}〜${end}<br>` +
+    `${count}名 ／ ${formatDatetime(start)} 〜 ${formatDatetime(end)}<br>` +
     `<span style="color:var(--text3);font-size:0.78rem;">失効: ${expireTime || '—'}</span>`;
   const box = document.getElementById('result-box');
   box.classList.add('show');
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/**
+ * "YYYY-MM-DDTHH:MM" または "YYYY/MM/DD HH:MM:SS" を
+ * 読みやすい形式 "MM/DD HH:MM" に整形する
+ */
+function formatDatetime(str) {
+  if (!str) return '—';
+  // datetime-local 形式: "2025-11-03T14:00"
+  const iso = String(str).replace(' ', 'T');
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(str);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${mm}/${dd} ${hh}:${mi}`;
 }
 
 document.getElementById('result-clear').addEventListener('click', () => {
@@ -622,8 +639,8 @@ function showTicketResult(ticket) {
 
   document.getElementById('tr-number').textContent = ticket.ticketNumber;
   document.getElementById('tr-count').textContent  = ticket.count + '名';
-  document.getElementById('tr-time').textContent   = ticket.startTime + ' 〜 ' + ticket.endTime;
-  document.getElementById('tr-expire').textContent = ticket.expireTime || '—';
+  document.getElementById('tr-time').textContent   = formatDatetime(ticket.startTime) + ' 〜 ' + formatDatetime(ticket.endTime);
+  document.getElementById('tr-expire').textContent = formatDatetime(ticket.expireTime) || '—';
 
   const stEl = document.getElementById('tr-status');
   stEl.innerHTML = `<span class="badge ${st.color}">${st.label}</span>`;
