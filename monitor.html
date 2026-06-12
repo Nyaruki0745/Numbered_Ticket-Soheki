@@ -383,11 +383,11 @@ function renderCallingList(list) {
     return;
   }
 
-  // 呼出中を先頭に、次いで予約済（開始時間昇順）
+  // 呼出中を先頭に、次いで予約済（開始日時昇順）
   const sorted = [...list].sort((a, b) => {
     if (a.status === 'calling' && b.status !== 'calling') return -1;
     if (a.status !== 'calling' && b.status === 'calling') return 1;
-    return a.startTime.localeCompare(b.startTime);
+    return String(a.startTime).localeCompare(String(b.startTime));
   });
 
   container.innerHTML = '';
@@ -400,11 +400,27 @@ function renderCallingList(list) {
         <span class="badge ${st.color}">${st.label}</span>
       </div>
       <div class="call-number">${ticket.ticketNumber}</div>
-      <div class="call-time">${ticket.startTime} 〜 ${ticket.endTime}</div>
+      <div class="call-time">${formatDatetime(ticket.startTime)} 〜 ${formatDatetime(ticket.endTime)}</div>
       <div class="call-count">${ticket.count}名</div>
     `;
     container.appendChild(card);
   });
+}
+
+/**
+ * "YYYY/MM/DD HH:MM" または "YYYY-MM-DDTHH:MM" を
+ * "MM/DD HH:MM" に整形する（モニター表示用）
+ */
+function formatDatetime(str) {
+  if (!str) return '—';
+  const iso = String(str).replace(/\//g, '-').replace(' ', 'T');
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(str);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${mm}/${dd} ${hh}:${mi}`;
 }
 
 // ============================================================
