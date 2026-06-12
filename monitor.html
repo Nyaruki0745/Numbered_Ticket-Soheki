@@ -304,16 +304,10 @@ document.getElementById('mon-password').addEventListener('keydown', e => {
 // ============================================================
 let pollTimer = null;
 let activeSheetIdx = 0;
-let activeSessions = {}; // sheetIdx -> { sheetName, password }
 
 function startMonitor() {
   document.getElementById('monitor-login').style.display = 'none';
   document.getElementById('monitor-body').classList.add('show');
-
-  // 全シートのsession情報を保存（複数シートポーリング対応）
-  CONFIG.SHEETS.forEach((s, i) => {
-    activeSessions[i] = s;
-  });
 
   buildSheetSelectorBar();
 
@@ -335,7 +329,10 @@ function buildSheetSelectorBar() {
     btn.textContent = s.label;
     btn.addEventListener('click', () => {
       activeSheetIdx = i;
-      // シート切替時は選択シートのセッションを更新（PWはシート切替ボタンを押さず再ログイン不要）
+      // シート切替時：同じPWでセッションのsheetNameだけ差し替え
+      // （PWはログイン時に入力済みのものをそのまま引き継ぐ）
+      const currentPw = API.getPassword();
+      API.setSession(CONFIG.SHEETS[i], currentPw);
       updateSheetSelectorUI();
       fetchAndRender();
     });
@@ -362,9 +359,9 @@ async function fetchAndRender() {
   status.textContent = '更新中...';
 
   try {
-    const sheet = CONFIG.SHEETS[activeSheetIdx];
-    // getCallingList はセッション内のPWを自動付与（api.js の _enteredPassword を使用）
-    const res = await API.getCallingList(sheet.sheetName, API.getSession()?._enteredPassword || '');
+    // API.setSession済みのシートで getCallingList を呼ぶ
+    // _enteredPassword は api.js の request() が自動付与するため引数不要
+    const res = await API.getCallingList();
     renderCallingList(res.list || []);
     status.textContent = '接続中';
   } catch(e) {
