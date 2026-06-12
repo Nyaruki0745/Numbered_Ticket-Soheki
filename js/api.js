@@ -128,26 +128,20 @@ const API = (() => {
    * 呼出リスト取得（モニター用）
    * セッションがない場合でも sheetName/password を直接渡せる
    */
-  async function getCallingList(sheetName, password) {
-    const payload = {
-      action            : "getCallingList",
-      sheetName,
-      password,
+  async function getCallingList() {
+    // _enteredPassword は request() が自動付与するため引数不要
+    return request("getCallingList", {
       callBeforeMinutes : CONFIG.CALL_BEFORE_MINUTES
-    };
-    const res = await fetch(CONFIG.GAS_URL, {
-      method  : "POST",
-      headers : { "Content-Type": "text/plain" },
-      body    : JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message || "取得失敗");
-    return data; // { success, list: [{ ticketNumber, count, startTime, endTime, status }] }
+    // GASが返す: { success, list: [{ ticketNumber, count, startTime, endTime, status }] }
+  }
+
+  function getPassword() {
+    return _enteredPassword;
   }
 
   return {
-    setSession, getSession, clearSession, hasSession,
+    setSession, getSession, getPassword, clearSession, hasSession,
     auth, register, lookup, updateStatus, getStats, getCallingList
   };
 })();
