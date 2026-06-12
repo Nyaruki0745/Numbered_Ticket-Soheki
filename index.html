@@ -308,14 +308,19 @@
             <input type="number" id="reg-count" min="1" max="99" value="1" placeholder="人数">
           </div>
 
+          <div class="field">
+            <label for="reg-date">日付</label>
+            <input type="date" id="reg-date">
+          </div>
+
           <div class="grid-2">
             <div class="field">
-              <label for="reg-start">開始日時</label>
-              <input type="datetime-local" id="reg-start">
+              <label for="reg-start">開始時刻</label>
+              <input type="time" id="reg-start">
             </div>
             <div class="field">
-              <label for="reg-end">終了日時</label>
-              <input type="datetime-local" id="reg-end">
+              <label for="reg-end">終了時刻</label>
+              <input type="time" id="reg-end">
             </div>
           </div>
 
@@ -533,15 +538,32 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // ============================================================
 // 登録タブ
 // ============================================================
+
+// 日付欄に今日の日付をデフォルト設定
+(function () {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0');
+  const d = String(today.getDate()).padStart(2, '0');
+  document.getElementById('reg-date').value = `${y}-${m}-${d}`;
+})();
+
 document.getElementById('reg-submit').addEventListener('click', async () => {
-  const count = parseInt(document.getElementById('reg-count').value, 10);
-  const start = document.getElementById('reg-start').value;
-  const end   = document.getElementById('reg-end').value;
+  const count   = parseInt(document.getElementById('reg-count').value, 10);
+  const date    = document.getElementById('reg-date').value;   // "YYYY-MM-DD"
+  const startT  = document.getElementById('reg-start').value;  // "HH:MM"
+  const endT    = document.getElementById('reg-end').value;    // "HH:MM"
 
   if (!count || count < 1) { toast('人数を入力してください', 'error'); return; }
-  if (!start) { toast('開始時間を入力してください', 'error'); return; }
-  if (!end)   { toast('終了時間を入力してください', 'error'); return; }
-  if (start >= end) { toast('終了時間は開始時間より後にしてください', 'error'); return; }
+  if (!date)   { toast('日付を入力してください', 'error'); return; }
+  if (!startT) { toast('開始時刻を入力してください', 'error'); return; }
+  if (!endT)   { toast('終了時刻を入力してください', 'error'); return; }
+  if (startT >= endT) { toast('終了時刻は開始時刻より後にしてください', 'error'); return; }
+
+  // GAS・スプレッドシートが確実に認識する形式 "YYYY/MM/DD HH:MM:SS" に組み立て
+  const [y, mo, d] = date.split('-');
+  const start = `${y}/${mo}/${d} ${startT}:00`;
+  const end   = `${y}/${mo}/${d} ${endT}:00`;
 
   const btn = document.getElementById('reg-submit');
   btn.disabled = true;
