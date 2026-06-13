@@ -114,6 +114,24 @@
   display: flex; justify-content: center;
   margin-top: 0.5rem;
 }
+
+/* パスワード行 */
+.pw-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.pw-row:last-child { border-bottom: none; }
+.pw-row .pw-label { font-size: 0.88rem; font-weight: 600; }
+.pw-row .pw-label small { display:block; color:var(--text3); font-size:0.75rem; font-weight:400; }
+.pw-not-registered {
+  font-size: 0.78rem; color: var(--warn);
+  background: rgba(240,180,41,0.1);
+  border-radius: 4px; padding: 0.15rem 0.5rem;
+}
 </style>
 </head>
 <body>
@@ -214,6 +232,20 @@
         </div>
       </div>
 
+      <!-- ===== パスワード管理 ===== -->
+      <div class="section">
+        <div class="section-title">シートパスワード管理</div>
+        <div class="card" style="display:flex;flex-direction:column;gap:0;">
+          <p style="font-size:0.82rem;color:var(--text2);margin-bottom:1rem;">
+            変更は即時反映されます（GitHub への保存・再デプロイ不要）。
+            PASSWORDSスクリプトプロパティに存在するシートのみ変更できます。
+          </p>
+          <div id="pw-list">
+            <div style="color:var(--text3);font-size:0.85rem;">読み込み中...</div>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== UI設定 ===== -->
       <div class="section">
         <div class="section-title">UI設定</div>
@@ -301,6 +333,7 @@ document.getElementById('admin-login-btn').addEventListener('click', async () =>
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
     await loadConfig();
+    await loadPasswords();
   } catch (e) {
     errEl.textContent = e.message;
   } finally {
@@ -332,6 +365,8 @@ async function loadConfig() {
     // config.jsのテキストをJSとして評価してオブジェクトに変換
     configObj  = parseConfigJs(res.content);
     renderForm(configObj);
+    // パスワードリストはシート一覧と連動して再描画
+    renderPasswordList();
     document.getElementById('loading-state').style.display = 'none';
     document.getElementById('edit-form').style.display     = 'block';
     isDirty = false;
@@ -655,6 +690,109 @@ function showSaveStatus(msg, type) {
   el.textContent  = msg;
   el.className    = 'show ' + type;
   if (type === 'success') setTimeout(() => { el.className = ''; }, 8000);
+}
+
+// ============================================================
+// パスワード管理
+// ============================================================
+
+// GASのPASSWORDSプロパティに登録済みのパスワード一覧 { sheetName: pw }
+let registeredPasswords = {};
+
+async function loadPasswords() {
+  const container = document.getElementById('pw-list');
+  try {
+    const res = await API.getPasswords(adminPassword);
+    registeredPasswords = res.passwords || {};
+    renderPasswordList();
+  } catch (e) {
+    container.innerHTML =
+      `<span class="text-danger" style="font-size:0.85rem;">取得失敗: ${e.message}</span>`;
+  }
+}
+
+function renderPasswordList() {
+  const container = document.getElementById('pw-list');
+  const sheets    = (configObj && configObj.SHEETS) ? configObj.SHEETS : [];
+
+  if (sheets.length === 0) {
+    container.innerHTML =
+      '<div style="color:var(--text3);font-size:0.85rem;">シートが登録されていません</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  sheets.forEach(s => {
+    const isRegistered = s.sheetName in registeredPasswords;
+    const row = document.createElement('div');
+    row.className = 'pw-row';
+
+    row.innerHTML = `
+      <div class="pw-label">
+        ${esc(s.label || s.sheetName)}
+        <small>${esc(s.sheetName)}</small>
+        ${!isRegistered ? '<span class="pw-not-registered">PASSWORDSに未登録</span>' : ''}
+      </div>
+      <div>
+        <input type="password"
+          class="pw-input"
+          data-sheet="${esc(s.sheetName)}"
+          placeholder="${isRegistered ? '新しいパスワード（変更する場合のみ）' : '未登録'}"
+          ${!isRegistered ? 'disabled title="GASのPASSWORDSプロパティにシートを追加してください"' : ''}
+          autocomplete="new-password">
+      </div>
+      <div>
+        <button class="btn btn-ghost btn-sm pw-toggle-btn" data-sheet="${esc(s.sheetName)}"
+          title="表示/非表示">👁</button>
+      </div>
+      <div>
+        <button class="btn btn-primary btn-sm pw-save-btn"
+          data-sheet="${esc(s.sheetName)}"
+          ${!isRegistered ? 'disabled' : ''}>変更</button>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+
+  // イベント設定
+  container.querySelectorAll('.pw-save-btn').forEach(btn => {
+    btn.addEventListener('click', () => changePassword(btn.dataset.sheet));
+  });
+  container.querySelectorAll('.pw-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = container.querySelector(`.pw-input[data-sheet="${btn.dataset.sheet}"]`);
+      if (input) input.type = input.type === 'password' ? 'text' : 'password';
+    });
+  });
+  // Enter で変更
+  container.querySelectorAll('.pw-input').forEach(input => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') changePassword(input.dataset.sheet);
+    });
+  });
+}
+
+async function changePassword(sheetName) {
+  const input = document.querySelector(`.pw-input[data-sheet="${CSS.escape(sheetName)}"]`);
+  if (!input) return;
+  const newPw = input.value.trim();
+
+  if (!newPw) { toast('新しいパスワードを入力してください', 'error'); return; }
+  if (newPw.length < 4) { toast('パスワードは4文字以上にしてください', 'error'); return; }
+
+  const btn = document.querySelector(`.pw-save-btn[data-sheet="${CSS.escape(sheetName)}"]`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+
+  try {
+    await API.updatePassword(adminPassword, sheetName, newPw);
+    registeredPasswords[sheetName] = newPw;
+    input.value = '';
+    toast(`「${sheetName}」のパスワードを変更しました`, 'success');
+  } catch (e) {
+    toast('変更失敗: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '変更'; }
+  }
 }
 
 // ============================================================
