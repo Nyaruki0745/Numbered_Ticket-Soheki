@@ -35,9 +35,9 @@ const CONFIG = {
   // -------------------------------------------------------
   SHEETS: [
     {
-      sheetName: "Debug2",
-      code: "X02",
-      label: "デバッグ２"
+      sheetName: "Debug",
+      code: "X01",
+      label: "デバッグ1"
     }
   ],
 
