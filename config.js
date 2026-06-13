@@ -9,7 +9,7 @@ const CONFIG = {
   // -------------------------------------------------------
   // GAS Web App エンドポイント
   // -------------------------------------------------------
-  GAS_URL: "https://script.google.com/macros/s/AKfycbyL2Nyd2BkeXGMP11-SCzG-wdsnzwdggrPQ4BZvU0lGyPYLkdkog5Y3TMgjVXgd04vNTw/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbyOFYzjUzxTLmFawEAKFAfFHpsQFv9_fA6ixGPaF8hijP-2zydX6VchV64skhd2SAU/exec",
 
   // -------------------------------------------------------
   // GitHub リポジトリ情報（管理画面からconfig.jsを自動更新するために使用）
