@@ -207,9 +207,40 @@ const API = (() => {
     return data; // { success, message, newSha }
   }
 
+  /** 全シートのパスワード一覧を取得 */
+  async function getPasswords(adminPassword) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({ action: "getPasswords", adminPassword })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "取得失敗");
+    return data; // { success, passwords: { sheetName: "pw", ... } }
+  }
+
+  /**
+   * 指定シートのパスワードを変更
+   * @param {string} adminPassword
+   * @param {string} sheetName
+   * @param {string} newPassword
+   */
+  async function updatePassword(adminPassword, sheetName, newPassword) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({ action: "updatePassword", adminPassword, sheetName, newPassword })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "変更失敗");
+    return data; // { success, message }
+  }
+
   return {
     setSession, getSession, getPassword, clearSession, hasSession,
     auth, register, lookup, updateStatus, getStats, getCallingList,
-    adminAuth, getConfig, saveConfig
+    adminAuth, getConfig, saveConfig, getPasswords, updatePassword
   };
 })();
