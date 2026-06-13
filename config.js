@@ -1,63 +1,69 @@
 /**
  * 整理券システム 設定ファイル
- * ここを編集するだけで全体の動作が変わります
+ * このファイルは管理画面（admin.html）から自動更新されます。
+ * 手動編集も可能ですが、管理画面での変更で上書きされます。
  */
 
 const CONFIG = {
 
   // -------------------------------------------------------
   // GAS Web App エンドポイント
-  // デプロイ後に取得したURLをここに貼り付ける
   // -------------------------------------------------------
-  GAS_URL: "https://script.google.com/macros/s/AKfycbybhxDtOnuS_WQLiOILFqApZdGoQBQABAgI5WB5HM4gvOe32Tw7Ld9qW5R7hxluW7DXwQ/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycby13giGqSMWL_hKo0mC7vVxk2MeDwMniPsmw8TjdbcfP1HcYcV-TvGYmc9_7AuLp-8nmA/exec",
+
+  // -------------------------------------------------------
+  // GitHub リポジトリ情報（管理画面からconfig.jsを自動更新するために使用）
+  // owner: GitHubユーザー名
+  // repo:  リポジトリ名
+  // path:  config.jsのリポジトリ内パス（通常は "config.js"）
+  // branch: ブランチ名（通常は "main"）
+  // -------------------------------------------------------
+  GITHUB_OWNER: "your-github-username",
+  GITHUB_REPO:  "your-repo-name",
+  GITHUB_PATH:  "config.js",
+  GITHUB_BRANCH: "main",
 
   // -------------------------------------------------------
   // シート設定
-  // sheetName: スプレッドシートのシート名（認証キーも兼ねる）
-  // code:       整理番号の先頭3桁（他シートと重複不可）
-  // label:      UI上の表示名
+  // sheetName:          スプレッドシートのシート名（認証キーも兼ねる）
+  // code:               整理番号の先頭3桁（他シートと重複不可・英数字）
+  // label:              UI上の表示名
+  // callBeforeMinutes:  （省略可）このシート専用の呼出タイミング（分）
+  // expireAfterMinutes: （省略可）このシート専用の失効タイミング（分）
   //
-  // ※ パスワードはここに書きません。
-  //    GAS のスクリプトプロパティ「PASSWORDS」に保管してください。
-  //    設定例: {"1日目_2組":"1234","1日目_3組":"5678","2日目_2組":"9012"}
+  // ※ パスワードはGASのスクリプトプロパティ「PASSWORDS」に保管
   // -------------------------------------------------------
   SHEETS: [
     {
-      sheetName: "Debug",
-      code: "X01",
-      label: "デバッグ　1"
+      sheetName: "Debug2",
+      code: "X02",
+      label: "デバッグ２"
     }
-    // 必要なだけ追加してください
   ],
 
   // -------------------------------------------------------
-  // 呼出設定
-  // CALL_BEFORE_MINUTES: 予約開始時間の何分前に「呼出中」にするか
-  //   0 = 開始時間ちょうどに呼出
-  // POLL_INTERVAL_MS:    モニター画面のポーリング間隔（ミリ秒）
+  // 呼出設定（グローバルデフォルト）
+  // シートごとに callBeforeMinutes で上書き可能
   // -------------------------------------------------------
   CALL_BEFORE_MINUTES: 0,
-  POLL_INTERVAL_MS: 15000,         // 15秒
+  POLL_INTERVAL_MS: 15000,
 
   // -------------------------------------------------------
-  // 失効設定
-  // EXPIRE_AFTER_MINUTES: 予約終了時間の何分後に失効にするか
-  //   0 = 終了時間ちょうどに失効
+  // 失効設定（グローバルデフォルト）
+  // シートごとに expireAfterMinutes で上書き可能
   // -------------------------------------------------------
-  EXPIRE_AFTER_MINUTES: 10,
+  EXPIRE_AFTER_MINUTES: 0,
 
   // -------------------------------------------------------
   // QRコード設定
-  // QR_MODE: "number" = QRの内容が整理番号そのもの (例: A01-0001)
-  //          "common"  = QR共通・番号は口頭/手入力で確認
-  // COMMON_QR_VALUE: QR_MODE が "common" のときにスキャンを受け付ける文字列
+  // QR_MODE: "number" = QRの内容が整理番号そのもの
+  //          "common" = QR共通・番号は口頭/手入力で確認
   // -------------------------------------------------------
   QR_MODE: "number",
   COMMON_QR_VALUE: "SEIRIKEN_CHECK",
 
   // -------------------------------------------------------
   // ステータス定義（表示名・色クラス）
-  // 追加・変更はここだけ
   // -------------------------------------------------------
   STATUSES: {
     reserved:  { label: "予約済",  color: "status-reserved"  },
@@ -72,5 +78,6 @@ const CONFIG = {
   // UI設定
   // -------------------------------------------------------
   APP_TITLE: "整理券システム",
-  MONITOR_TITLE: "呼出モニター"
+  MONITOR_TITLE: "呼出モニター",
+  ADMIN_TITLE: "管理画面"
 };

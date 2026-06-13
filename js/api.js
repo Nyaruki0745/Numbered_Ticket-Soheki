@@ -140,8 +140,107 @@ const API = (() => {
     return _enteredPassword;
   }
 
+  // ---------- 管理API（管理パスワード使用） ----------
+
+  /** 管理パスワード認証 */
+  async function adminAuth(adminPassword) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({ action: "adminAuth", adminPassword })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "管理認証失敗");
+    return data;
+  }
+
+  /**
+   * 現在の config.js をGitHub APIから取得
+   * @returns { content: string, sha: string }
+   */
+  async function getConfig(adminPassword) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({
+        action        : "getConfig",
+        adminPassword,
+        owner  : CONFIG.GITHUB_OWNER,
+        repo   : CONFIG.GITHUB_REPO,
+        path   : CONFIG.GITHUB_PATH,
+        branch : CONFIG.GITHUB_BRANCH
+      })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "取得失敗");
+    return data; // { success, content, sha }
+  }
+
+  /**
+   * 新しい config.js 内容をGitHub APIでコミット
+   * @param {string} adminPassword
+   * @param {string} content - 新しいconfig.jsのテキスト全体
+   * @param {string} sha     - getConfigで取得したSHA
+   * @param {string} commitMessage
+   */
+  async function saveConfig(adminPassword, content, sha, commitMessage) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({
+        action        : "saveConfig",
+        adminPassword,
+        owner         : CONFIG.GITHUB_OWNER,
+        repo          : CONFIG.GITHUB_REPO,
+        path          : CONFIG.GITHUB_PATH,
+        branch        : CONFIG.GITHUB_BRANCH,
+        content,
+        sha,
+        commitMessage
+      })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "保存失敗");
+    return data; // { success, message, newSha }
+  }
+
+  /** 全シートのパスワード一覧を取得 */
+  async function getPasswords(adminPassword) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({ action: "getPasswords", adminPassword })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "取得失敗");
+    return data; // { success, passwords: { sheetName: "pw", ... } }
+  }
+
+  /**
+   * 指定シートのパスワードを変更
+   * @param {string} adminPassword
+   * @param {string} sheetName
+   * @param {string} newPassword
+   */
+  async function updatePassword(adminPassword, sheetName, newPassword) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({ action: "updatePassword", adminPassword, sheetName, newPassword })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "変更失敗");
+    return data; // { success, message }
+  }
+
   return {
     setSession, getSession, getPassword, clearSession, hasSession,
-    auth, register, lookup, updateStatus, getStats, getCallingList
+    auth, register, lookup, updateStatus, getStats, getCallingList,
+    adminAuth, getConfig, saveConfig, getPasswords, updatePassword
   };
 })();

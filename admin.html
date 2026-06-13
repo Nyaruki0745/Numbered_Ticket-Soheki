@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理画面</title>
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ===== 管理画面固有スタイル ===== */
+#app { max-width: 720px; margin: 0 auto; padding: 1rem 1rem 4rem; }
+
+/* ヘッダー */
+#header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.25rem;
+}
+
+/* ログイン */
+#login-screen {
+  min-height: 80vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0;
+}
+#login-screen .logo { font-size: 2.5rem; margin-bottom: 0.25rem; }
+#login-screen h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem; }
+#login-screen .sub { color: var(--text2); font-size: 0.85rem; margin-bottom: 2rem; }
+#login-form { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 1rem; }
+
+/* セクション */
+.section { margin-bottom: 2rem; }
+.section-title {
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text2);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* シートカード */
+.sheet-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  position: relative;
+}
+.sheet-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.sheet-card-label {
+  font-weight: 700; font-size: 0.95rem;
+}
+.sheet-card-fields {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+}
+.sheet-card-fields-wide {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+.field-hint {
+  font-size: 0.72rem; color: var(--text3); margin-top: 0.2rem;
+}
+.override-toggle {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.8rem; color: var(--text2); cursor: pointer;
+  margin-top: 0.6rem;
+  user-select: none;
+}
+.override-toggle input[type="checkbox"] {
+  width: auto; accent-color: var(--accent);
+}
+.override-fields {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border2);
+  display: none;
+}
+.override-fields.show { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+
+/* グローバル設定グリッド */
+.global-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
+}
+
+/* QRモード選択 */
+.radio-group { display: flex; gap: 1rem; }
+.radio-group label {
+  display: flex; align-items: center; gap: 0.4rem;
+  cursor: pointer; color: var(--text); text-transform: none;
+  letter-spacing: 0; font-size: 0.9rem;
+}
+.radio-group input[type="radio"] { width: auto; accent-color: var(--accent); }
+
+/* 保存ステータス */
+#save-status {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 0.7rem 1.4rem;
+  font-size: 0.88rem; box-shadow: var(--shadow);
+  display: none; z-index: 200;
+}
+#save-status.show { display: block; }
+#save-status.success { border-left: 3px solid var(--success); color: var(--success); }
+#save-status.error   { border-left: 3px solid var(--danger);  color: var(--danger); }
+#save-status.info    { border-left: 3px solid var(--accent);  color: var(--text); }
+
+/* 追加ボタン行 */
+.add-row {
+  display: flex; justify-content: center;
+  margin-top: 0.5rem;
+}
+
+/* パスワード行 */
+.pw-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.pw-row:last-child { border-bottom: none; }
+.pw-row .pw-label { font-size: 0.88rem; font-weight: 600; }
+.pw-row .pw-label small { display:block; color:var(--text3); font-size:0.75rem; font-weight:400; }
+.pw-not-registered {
+  font-size: 0.78rem; color: var(--warn);
+  background: rgba(240,180,41,0.1);
+  border-radius: 4px; padding: 0.15rem 0.5rem;
+}
+</style>
+</head>
+<body>
+
+<!-- ===== ログイン画面 ===== -->
+<div id="login-screen">
+  <div class="logo">⚙️</div>
+  <h2 id="admin-title-login">管理画面</h2>
+  <p class="sub">管理パスワードを入力してください</p>
+  <div id="login-form">
+    <div class="field">
+      <label for="admin-pw-input">管理パスワード</label>
+      <input type="password" id="admin-pw-input" placeholder="管理パスワード" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" id="admin-login-btn">ログイン</button>
+    <p id="login-error" class="text-danger" style="font-size:0.85rem;text-align:center;min-height:1.2em;"></p>
+  </div>
+</div>
+
+<!-- ===== メイン管理画面 ===== -->
+<div id="main-app" style="display:none;">
+  <div id="app">
+
+    <div id="header">
+      <h1>⚙️ <span id="admin-title-header">管理画面</span></h1>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <a href="index.html" class="btn btn-ghost btn-sm">← スタッフ画面</a>
+        <button class="btn btn-ghost btn-sm" id="logout-btn">ログアウト</button>
+      </div>
+    </div>
+
+    <!-- 読み込み中 -->
+    <div id="loading-state" style="text-align:center;padding:3rem;color:var(--text2);">
+      <div class="spinner" style="margin:0 auto 1rem;width:28px;height:28px;"></div>
+      config.js を読み込み中...
+    </div>
+
+    <!-- 編集フォーム -->
+    <div id="edit-form" style="display:none;">
+
+      <!-- ===== シート設定 ===== -->
+      <div class="section">
+        <div class="section-title">シート設定</div>
+        <div id="sheets-container">
+          <!-- JSで生成 -->
+        </div>
+        <div class="add-row">
+          <button class="btn btn-ghost btn-sm" id="add-sheet-btn">＋ シートを追加</button>
+        </div>
+      </div>
+
+      <!-- ===== グローバル設定 ===== -->
+      <div class="section">
+        <div class="section-title">グローバル設定（全シート共通デフォルト）</div>
+        <div class="card">
+          <div class="global-grid">
+            <div class="field">
+              <label for="g-call-before">呼出タイミング（分前）</label>
+              <input type="number" id="g-call-before" min="0" max="60">
+              <div class="field-hint">開始時間の何分前に「呼出中」にするか（0=開始ちょうど）</div>
+            </div>
+            <div class="field">
+              <label for="g-expire-after">失効タイミング（分後）</label>
+              <input type="number" id="g-expire-after" min="0" max="120">
+              <div class="field-hint">終了時間の何分後に「失効」にするか（0=終了ちょうど）</div>
+            </div>
+            <div class="field">
+              <label for="g-poll-interval">モニター更新間隔（秒）</label>
+              <input type="number" id="g-poll-interval" min="5" max="300">
+              <div class="field-hint">呼出モニターの自動更新間隔</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== QRコード設定 ===== -->
+      <div class="section">
+        <div class="section-title">QRコード設定</div>
+        <div class="card" style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="field">
+            <label>QRモード</label>
+            <div class="radio-group" style="margin-top:0.4rem;">
+              <label>
+                <input type="radio" name="qr-mode" value="number">
+                整理番号埋め込み（スキャンで自動照合）
+              </label>
+              <label>
+                <input type="radio" name="qr-mode" value="common">
+                共通QR（確認のみ）
+              </label>
+            </div>
+          </div>
+          <div class="field" id="common-qr-field">
+            <label for="g-common-qr">共通QR文字列</label>
+            <input type="text" id="g-common-qr" placeholder="SEIRIKEN_CHECK">
+            <div class="field-hint">QRモードが「共通QR」のときにスキャンを受け付ける文字列</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== パスワード管理 ===== -->
+      <div class="section">
+        <div class="section-title">シートパスワード管理</div>
+        <div class="card" style="display:flex;flex-direction:column;gap:0;">
+          <p style="font-size:0.82rem;color:var(--text2);margin-bottom:1rem;">
+            変更は即時反映されます（GitHub への保存・再デプロイ不要）。
+            PASSWORDSスクリプトプロパティに存在するシートのみ変更できます。
+          </p>
+          <div id="pw-list">
+            <div style="color:var(--text3);font-size:0.85rem;">読み込み中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== UI設定 ===== -->
+      <div class="section">
+        <div class="section-title">UI設定</div>
+        <div class="card">
+          <div class="global-grid">
+            <div class="field">
+              <label for="g-app-title">スタッフ画面タイトル</label>
+              <input type="text" id="g-app-title" placeholder="整理券システム">
+            </div>
+            <div class="field">
+              <label for="g-monitor-title">モニタータイトル</label>
+              <input type="text" id="g-monitor-title" placeholder="呼出モニター">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 保存ボタン ===== -->
+      <div style="display:flex;gap:0.75rem;align-items:center;justify-content:flex-end;margin-top:1rem;">
+        <span id="unsaved-badge" style="font-size:0.8rem;color:var(--warn);display:none;">● 未保存の変更があります</span>
+        <button class="btn btn-ghost" id="reload-btn">再読み込み</button>
+        <button class="btn btn-primary btn-lg" id="save-btn">
+          config.js を保存してデプロイ
+        </button>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text3);text-align:right;margin-top:0.5rem;">
+        保存後、GitHub Pages の再デプロイに数十秒〜1分程度かかります
+      </p>
+
+    </div><!-- /edit-form -->
+
+  </div><!-- /app -->
+</div><!-- /main-app -->
+
+<!-- 保存ステータス -->
+<div id="save-status"></div>
+<!-- トースト -->
+<div id="toast-container"></div>
+
+<script src="config.js"></script>
+<script src="js/api.js"></script>
+<script>
+// ============================================================
+// 状態
+// ============================================================
+let adminPassword = '';
+let currentSha    = '';  // GitHubのファイルSHA（更新時に必要）
+let configObj     = null; // 編集中のconfig内容
+let isDirty       = false;
+
+// ============================================================
+// 初期化
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  document.title = CONFIG.ADMIN_TITLE || '管理画面';
+  document.getElementById('admin-title-login').textContent  = CONFIG.ADMIN_TITLE || '管理画面';
+  document.getElementById('admin-title-header').textContent = CONFIG.ADMIN_TITLE || '管理画面';
+
+  // QRモード切替でフィールド表示/非表示
+  document.querySelectorAll('input[name="qr-mode"]').forEach(r => {
+    r.addEventListener('change', updateQrFieldVisibility);
+  });
+
+  document.getElementById('admin-pw-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('admin-login-btn').click();
+  });
+});
+
+// ============================================================
+// ログイン
+// ============================================================
+document.getElementById('admin-login-btn').addEventListener('click', async () => {
+  const pw    = document.getElementById('admin-pw-input').value.trim();
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!pw) { errEl.textContent = 'パスワードを入力してください'; return; }
+
+  const btn = document.getElementById('admin-login-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    await API.adminAuth(pw);
+    adminPassword = pw;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    await loadConfig();
+    await loadPasswords();
+  } catch (e) {
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'ログイン';
+  }
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+  adminPassword = '';
+  currentSha    = '';
+  configObj     = null;
+  isDirty       = false;
+  document.getElementById('main-app').style.display  = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('admin-pw-input').value = '';
+});
+
+// ============================================================
+// config.js 読み込み
+// ============================================================
+async function loadConfig() {
+  document.getElementById('loading-state').style.display = 'block';
+  document.getElementById('edit-form').style.display     = 'none';
+
+  try {
+    const res = await API.getConfig(adminPassword);
+    currentSha = res.sha;
+    // config.jsのテキストをJSとして評価してオブジェクトに変換
+    configObj  = parseConfigJs(res.content);
+    renderForm(configObj);
+    // パスワードリストはシート一覧と連動して再描画
+    renderPasswordList();
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('edit-form').style.display     = 'block';
+    isDirty = false;
+    updateDirtyBadge();
+  } catch (e) {
+    document.getElementById('loading-state').innerHTML =
+      `<span class="text-danger">読み込み失敗: ${e.message}</span>`;
+  }
+}
+
+/**
+ * config.js のテキストから CONFIG オブジェクトを抽出する
+ * "const CONFIG = { ... };" のJSONライクな部分を eval で取得
+ */
+function parseConfigJs(text) {
+  // CONFIG オブジェクト部分を安全に取り出す
+  // 末尾のセミコロンを除去して eval
+  const match = text.match(/const\s+CONFIG\s*=\s*(\{[\s\S]*?\})\s*;?\s*$/m);
+  if (!match) {
+    // より寛容なマッチ
+    const match2 = text.match(/const\s+CONFIG\s*=\s*([\s\S]+)/);
+    if (!match2) throw new Error("config.js のパースに失敗しました");
+    // 末尾の ; を除去して eval
+    const src = match2[1].replace(/;\s*$/, '').trim();
+    // eslint-disable-next-line no-new-func
+    return Function('"use strict"; return (' + src + ')')();
+  }
+  // eslint-disable-next-line no-new-func
+  return Function('"use strict"; return (' + match[1] + ')')();
+}
+
+document.getElementById('reload-btn').addEventListener('click', async () => {
+  if (isDirty && !confirm('未保存の変更があります。再読み込みすると変更は失われます。続けますか？')) return;
+  await loadConfig();
+});
+
+// ============================================================
+// フォーム描画
+// ============================================================
+function renderForm(cfg) {
+  // グローバル設定
+  document.getElementById('g-call-before').value   = cfg.CALL_BEFORE_MINUTES  ?? 0;
+  document.getElementById('g-expire-after').value  = cfg.EXPIRE_AFTER_MINUTES ?? 0;
+  document.getElementById('g-poll-interval').value = Math.round((cfg.POLL_INTERVAL_MS ?? 15000) / 1000);
+  document.getElementById('g-app-title').value     = cfg.APP_TITLE     || '';
+  document.getElementById('g-monitor-title').value = cfg.MONITOR_TITLE || '';
+
+  // QR設定
+  const qrMode = cfg.QR_MODE || 'number';
+  document.querySelector(`input[name="qr-mode"][value="${qrMode}"]`).checked = true;
+  document.getElementById('g-common-qr').value = cfg.COMMON_QR_VALUE || '';
+  updateQrFieldVisibility();
+
+  // シート一覧
+  renderSheets(cfg.SHEETS || []);
+
+  // 変更検知
+  attachChangeListeners();
+}
+
+function renderSheets(sheets) {
+  const container = document.getElementById('sheets-container');
+  container.innerHTML = '';
+  sheets.forEach((s, i) => renderSheetCard(s, i));
+}
+
+function renderSheetCard(sheet, index) {
+  const container = document.getElementById('sheets-container');
+  const hasCallOverride   = sheet.callBeforeMinutes   !== undefined;
+  const hasExpireOverride = sheet.expireAfterMinutes  !== undefined;
+  const hasOverride       = hasCallOverride || hasExpireOverride;
+
+  const card = document.createElement('div');
+  card.className    = 'sheet-card';
+  card.dataset.index = index;
+  card.innerHTML = `
+    <div class="sheet-card-header">
+      <span class="sheet-card-label"># ${index + 1}</span>
+      <button class="btn btn-danger btn-sm remove-sheet-btn" data-index="${index}">削除</button>
+    </div>
+    <div class="sheet-card-fields">
+      <div class="field">
+        <label>シート名</label>
+        <input type="text" class="f-sheetName" value="${esc(sheet.sheetName)}" placeholder="1日目_2組">
+        <div class="field-hint">スプレッドシートのシート名と完全一致</div>
+      </div>
+      <div class="field">
+        <label>識別コード（3桁英数字）</label>
+        <input type="text" class="f-code" value="${esc(sheet.code)}" maxlength="3" placeholder="A01" style="text-transform:uppercase;font-family:var(--font-mono);">
+        <div class="field-hint">整理番号の先頭3桁・他と重複不可</div>
+      </div>
+      <div class="field" style="grid-column:1/-1;">
+        <label>表示名</label>
+        <input type="text" class="f-label" value="${esc(sheet.label)}" placeholder="1日目 2組">
+        <div class="field-hint">スタッフ画面・モニターに表示される名前</div>
+      </div>
+    </div>
+    <label class="override-toggle">
+      <input type="checkbox" class="f-override-check" ${hasOverride ? 'checked' : ''}>
+      このシートの呼出・失効タイミングをグローバル設定から上書きする
+    </label>
+    <div class="override-fields ${hasOverride ? 'show' : ''}">
+      <div class="field">
+        <label>呼出タイミング（分前）</label>
+        <input type="number" class="f-call" min="0" max="60" value="${hasCallOverride ? sheet.callBeforeMinutes : ''}">
+        <div class="field-hint">空欄=グローバル設定を使用</div>
+      </div>
+      <div class="field">
+        <label>失効タイミング（分後）</label>
+        <input type="number" class="f-expire" min="0" max="120" value="${hasExpireOverride ? sheet.expireAfterMinutes : ''}">
+        <div class="field-hint">空欄=グローバル設定を使用</div>
+      </div>
+    </div>
+  `;
+  container.appendChild(card);
+
+  // 上書きチェックボックス
+  card.querySelector('.f-override-check').addEventListener('change', function () {
+    const fields = card.querySelector('.override-fields');
+    fields.classList.toggle('show', this.checked);
+    markDirty();
+  });
+  // 削除ボタン
+  card.querySelector('.remove-sheet-btn').addEventListener('click', () => {
+    if (!confirm(`シート「${sheet.sheetName}」の設定を削除しますか？\n（スプレッドシート本体は削除されません）`)) return;
+    card.remove();
+    reindexSheets();
+    markDirty();
+  });
+}
+
+// シートカードの番号を振り直す
+function reindexSheets() {
+  document.querySelectorAll('.sheet-card').forEach((card, i) => {
+    card.dataset.index = i;
+    card.querySelector('.sheet-card-label').textContent = `# ${i + 1}`;
+    card.querySelector('.remove-sheet-btn').dataset.index = i;
+  });
+}
+
+// シート追加
+document.getElementById('add-sheet-btn').addEventListener('click', () => {
+  const count = document.querySelectorAll('.sheet-card').length;
+  renderSheetCard({ sheetName: '', code: '', label: '' }, count);
+  attachChangeListeners();
+  markDirty();
+});
+
+function updateQrFieldVisibility() {
+  const mode = document.querySelector('input[name="qr-mode"]:checked')?.value;
+  document.getElementById('common-qr-field').style.display = mode === 'common' ? 'block' : 'none';
+}
+
+// ============================================================
+// 変更検知
+// ============================================================
+function attachChangeListeners() {
+  document.querySelectorAll('#edit-form input, #edit-form select').forEach(el => {
+    el.removeEventListener('input', markDirty);
+    el.addEventListener('input', markDirty);
+    el.removeEventListener('change', markDirty);
+    el.addEventListener('change', markDirty);
+  });
+}
+
+function markDirty() {
+  isDirty = true;
+  updateDirtyBadge();
+}
+
+function updateDirtyBadge() {
+  document.getElementById('unsaved-badge').style.display = isDirty ? 'inline' : 'none';
+}
+
+// ============================================================
+// フォームからconfigオブジェクトを収集
+// ============================================================
+function collectConfig() {
+  const sheets = [];
+  document.querySelectorAll('.sheet-card').forEach(card => {
+    const sheetName = card.querySelector('.f-sheetName').value.trim();
+    const code      = card.querySelector('.f-code').value.trim().toUpperCase();
+    const label     = card.querySelector('.f-label').value.trim();
+    if (!sheetName || !code) return; // 空欄は除外
+
+    const overrideEnabled = card.querySelector('.f-override-check').checked;
+    const callVal   = card.querySelector('.f-call').value;
+    const expireVal = card.querySelector('.f-expire').value;
+
+    const s = { sheetName, code, label };
+    if (overrideEnabled && callVal   !== '') s.callBeforeMinutes   = parseInt(callVal, 10);
+    if (overrideEnabled && expireVal !== '') s.expireAfterMinutes  = parseInt(expireVal, 10);
+    sheets.push(s);
+  });
+
+  // コードの重複チェック
+  const codes = sheets.map(s => s.code);
+  const dup   = codes.find((c, i) => codes.indexOf(c) !== i);
+  if (dup) throw new Error(`識別コード「${dup}」が重複しています`);
+
+  const qrMode = document.querySelector('input[name="qr-mode"]:checked')?.value || 'number';
+
+  return {
+    GAS_URL        : configObj.GAS_URL,
+    GITHUB_OWNER   : configObj.GITHUB_OWNER,
+    GITHUB_REPO    : configObj.GITHUB_REPO,
+    GITHUB_PATH    : configObj.GITHUB_PATH,
+    GITHUB_BRANCH  : configObj.GITHUB_BRANCH,
+    SHEETS         : sheets,
+    CALL_BEFORE_MINUTES  : parseInt(document.getElementById('g-call-before').value,  10) || 0,
+    EXPIRE_AFTER_MINUTES : parseInt(document.getElementById('g-expire-after').value, 10) || 0,
+    POLL_INTERVAL_MS     : (parseInt(document.getElementById('g-poll-interval').value, 10) || 15) * 1000,
+    QR_MODE        : qrMode,
+    COMMON_QR_VALUE: document.getElementById('g-common-qr').value.trim() || 'SEIRIKEN_CHECK',
+    STATUSES       : configObj.STATUSES,
+    APP_TITLE      : document.getElementById('g-app-title').value.trim()    || '整理券システム',
+    MONITOR_TITLE  : document.getElementById('g-monitor-title').value.trim() || '呼出モニター',
+    ADMIN_TITLE    : configObj.ADMIN_TITLE || '管理画面',
+  };
+}
+
+// ============================================================
+// configオブジェクト → config.js テキスト生成
+// ============================================================
+function buildConfigJs(cfg) {
+  const sheetsStr = cfg.SHEETS.map(s => {
+    let lines = [
+      `      sheetName: ${JSON.stringify(s.sheetName)}`,
+      `      code: ${JSON.stringify(s.code)}`,
+      `      label: ${JSON.stringify(s.label)}`
+    ];
+    if (s.callBeforeMinutes   !== undefined) lines.push(`      callBeforeMinutes: ${s.callBeforeMinutes}`);
+    if (s.expireAfterMinutes  !== undefined) lines.push(`      expireAfterMinutes: ${s.expireAfterMinutes}`);
+    return `    {\n${lines.join(',\n')}\n    }`;
+  }).join(',\n');
+
+  const statusesStr = Object.entries(cfg.STATUSES).map(([k, v]) =>
+    `    ${k}: { label: ${JSON.stringify(v.label)}, color: ${JSON.stringify(v.color)} }`
+  ).join(',\n');
+
+  return `/**
+ * 整理券システム 設定ファイル
+ * このファイルは管理画面（admin.html）から自動更新されます。
+ * 手動編集も可能ですが、管理画面での変更で上書きされます。
+ */
+
+const CONFIG = {
+
+  GAS_URL: ${JSON.stringify(cfg.GAS_URL)},
+
+  GITHUB_OWNER: ${JSON.stringify(cfg.GITHUB_OWNER)},
+  GITHUB_REPO:  ${JSON.stringify(cfg.GITHUB_REPO)},
+  GITHUB_PATH:  ${JSON.stringify(cfg.GITHUB_PATH)},
+  GITHUB_BRANCH: ${JSON.stringify(cfg.GITHUB_BRANCH)},
+
+  SHEETS: [
+${sheetsStr}
+  ],
+
+  CALL_BEFORE_MINUTES: ${cfg.CALL_BEFORE_MINUTES},
+  POLL_INTERVAL_MS: ${cfg.POLL_INTERVAL_MS},
+
+  EXPIRE_AFTER_MINUTES: ${cfg.EXPIRE_AFTER_MINUTES},
+
+  QR_MODE: ${JSON.stringify(cfg.QR_MODE)},
+  COMMON_QR_VALUE: ${JSON.stringify(cfg.COMMON_QR_VALUE)},
+
+  STATUSES: {
+${statusesStr}
+  },
+
+  APP_TITLE: ${JSON.stringify(cfg.APP_TITLE)},
+  MONITOR_TITLE: ${JSON.stringify(cfg.MONITOR_TITLE)},
+  ADMIN_TITLE: ${JSON.stringify(cfg.ADMIN_TITLE)}
+};
+`;
+}
+
+// ============================================================
+// 保存
+// ============================================================
+document.getElementById('save-btn').addEventListener('click', async () => {
+  let newCfg;
+  try {
+    newCfg = collectConfig();
+  } catch (e) {
+    toast(e.message, 'error');
+    return;
+  }
+
+  const newContent = buildConfigJs(newCfg);
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 保存中...';
+  showSaveStatus('GitHub へ送信中...', 'info');
+
+  try {
+    const res = await API.saveConfig(
+      adminPassword,
+      newContent,
+      currentSha,
+      'chore: update config.js via admin panel'
+    );
+    currentSha = res.newSha || currentSha;
+    configObj  = newCfg;
+    isDirty    = false;
+    updateDirtyBadge();
+    showSaveStatus('✓ 保存完了！GitHub Pages の再デプロイをお待ちください（約1分）', 'success');
+    toast('config.js を更新しました', 'success');
+  } catch (e) {
+    showSaveStatus('✗ 保存失敗: ' + e.message, 'error');
+    toast('保存に失敗しました: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'config.js を保存してデプロイ';
+  }
+});
+
+function showSaveStatus(msg, type) {
+  const el = document.getElementById('save-status');
+  el.textContent  = msg;
+  el.className    = 'show ' + type;
+  if (type === 'success') setTimeout(() => { el.className = ''; }, 8000);
+}
+
+// ============================================================
+// パスワード管理
+// ============================================================
+
+// GASのPASSWORDSプロパティに登録済みのパスワード一覧 { sheetName: pw }
+let registeredPasswords = {};
+
+async function loadPasswords() {
+  const container = document.getElementById('pw-list');
+  try {
+    const res = await API.getPasswords(adminPassword);
+    registeredPasswords = res.passwords || {};
+    renderPasswordList();
+  } catch (e) {
+    container.innerHTML =
+      `<span class="text-danger" style="font-size:0.85rem;">取得失敗: ${e.message}</span>`;
+  }
+}
+
+function renderPasswordList() {
+  const container = document.getElementById('pw-list');
+  const sheets    = (configObj && configObj.SHEETS) ? configObj.SHEETS : [];
+
+  if (sheets.length === 0) {
+    container.innerHTML =
+      '<div style="color:var(--text3);font-size:0.85rem;">シートが登録されていません</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  sheets.forEach(s => {
+    const isRegistered = s.sheetName in registeredPasswords;
+    const row = document.createElement('div');
+    row.className = 'pw-row';
+
+    row.innerHTML = `
+      <div class="pw-label">
+        ${esc(s.label || s.sheetName)}
+        <small>${esc(s.sheetName)}</small>
+        ${!isRegistered ? '<span class="pw-not-registered">PASSWORDSに未登録</span>' : ''}
+      </div>
+      <div>
+        <input type="password"
+          class="pw-input"
+          data-sheet="${esc(s.sheetName)}"
+          placeholder="${isRegistered ? '新しいパスワード（変更する場合のみ）' : '未登録'}"
+          ${!isRegistered ? 'disabled title="GASのPASSWORDSプロパティにシートを追加してください"' : ''}
+          autocomplete="new-password">
+      </div>
+      <div>
+        <button class="btn btn-ghost btn-sm pw-toggle-btn" data-sheet="${esc(s.sheetName)}"
+          title="表示/非表示">👁</button>
+      </div>
+      <div>
+        <button class="btn btn-primary btn-sm pw-save-btn"
+          data-sheet="${esc(s.sheetName)}"
+          ${!isRegistered ? 'disabled' : ''}>変更</button>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+
+  // イベント設定
+  container.querySelectorAll('.pw-save-btn').forEach(btn => {
+    btn.addEventListener('click', () => changePassword(btn.dataset.sheet));
+  });
+  container.querySelectorAll('.pw-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = container.querySelector(`.pw-input[data-sheet="${btn.dataset.sheet}"]`);
+      if (input) input.type = input.type === 'password' ? 'text' : 'password';
+    });
+  });
+  // Enter で変更
+  container.querySelectorAll('.pw-input').forEach(input => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') changePassword(input.dataset.sheet);
+    });
+  });
+}
+
+async function changePassword(sheetName) {
+  const input = document.querySelector(`.pw-input[data-sheet="${CSS.escape(sheetName)}"]`);
+  if (!input) return;
+  const newPw = input.value.trim();
+
+  if (!newPw) { toast('新しいパスワードを入力してください', 'error'); return; }
+  if (newPw.length < 4) { toast('パスワードは4文字以上にしてください', 'error'); return; }
+
+  const btn = document.querySelector(`.pw-save-btn[data-sheet="${CSS.escape(sheetName)}"]`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+
+  try {
+    await API.updatePassword(adminPassword, sheetName, newPw);
+    registeredPasswords[sheetName] = newPw;
+    input.value = '';
+    toast(`「${sheetName}」のパスワードを変更しました`, 'success');
+  } catch (e) {
+    toast('変更失敗: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '変更'; }
+  }
+}
+
+// ============================================================
+// トースト・ユーティリティ
+// ============================================================
+function toast(msg, type = 'info') {
+  const c  = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className   = 'toast ' + type;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+</script>
+
+</body>
+</html>
