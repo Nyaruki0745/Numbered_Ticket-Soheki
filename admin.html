@@ -118,7 +118,7 @@
 /* パスワード行 */
 .pw-row {
   display: grid;
-  grid-template-columns: 1fr 1fr auto auto;
+  grid-template-columns: 1fr 1fr auto auto auto;
   gap: 0.6rem;
   align-items: center;
   padding: 0.6rem 0;
@@ -237,8 +237,8 @@
         <div class="section-title">シートパスワード管理</div>
         <div class="card" style="display:flex;flex-direction:column;gap:0;">
           <p style="font-size:0.82rem;color:var(--text2);margin-bottom:1rem;">
-            変更は即時反映されます（GitHub への保存・再デプロイ不要）。
-            PASSWORDSスクリプトプロパティに存在するシートのみ変更できます。
+            変更・新規登録は即時反映されます（GitHub への保存・再デプロイ不要）。<br>
+            config.js のシート一覧と同期しています。<span style="color:var(--warn);">●未登録</span>のシートには初回パスワードを設定してください。
           </p>
           <div id="pw-list">
             <div style="color:var(--text3);font-size:0.85rem;">読み込み中...</div>
@@ -731,24 +731,35 @@ function renderPasswordList() {
       <div class="pw-label">
         ${esc(s.label || s.sheetName)}
         <small>${esc(s.sheetName)}</small>
-        ${!isRegistered ? '<span class="pw-not-registered">PASSWORDSに未登録</span>' : ''}
+        ${!isRegistered
+          ? '<span class="pw-not-registered">未登録</span>'
+          : '<span class="badge status-received" style="font-size:0.7rem;">登録済</span>'}
       </div>
       <div>
         <input type="password"
           class="pw-input"
           data-sheet="${esc(s.sheetName)}"
-          placeholder="${isRegistered ? '新しいパスワード（変更する場合のみ）' : '未登録'}"
-          ${!isRegistered ? 'disabled title="GASのPASSWORDSプロパティにシートを追加してください"' : ''}
+          placeholder="${isRegistered ? '新しいパスワード（変更する場合のみ）' : '初期パスワードを設定'}"
           autocomplete="new-password">
       </div>
       <div>
-        <button class="btn btn-ghost btn-sm pw-toggle-btn" data-sheet="${esc(s.sheetName)}"
-          title="表示/非表示">👁</button>
+        <button class="btn btn-ghost btn-sm pw-toggle-btn"
+          data-sheet="${esc(s.sheetName)}" title="表示/非表示">👁</button>
       </div>
       <div>
-        <button class="btn btn-primary btn-sm pw-save-btn"
+        <button class="btn btn-sm pw-save-btn ${isRegistered ? 'btn-primary' : 'btn-success'}"
           data-sheet="${esc(s.sheetName)}"
-          ${!isRegistered ? 'disabled' : ''}>変更</button>
+          data-is-new="${!isRegistered}">
+          ${isRegistered ? '変更' : '登録'}
+        </button>
+      </div>
+      <div>
+        <button class="btn btn-danger btn-sm pw-remove-btn"
+          data-sheet="${esc(s.sheetName)}"
+          ${!isRegistered ? 'disabled style="opacity:0.3"' : ''}
+          title="${isRegistered ? 'PASSWORDSから削除（ログイン不可になります）' : '未登録のため不要'}">
+          削除
+        </button>
       </div>
     `;
     container.appendChild(row);
@@ -756,42 +767,73 @@ function renderPasswordList() {
 
   // イベント設定
   container.querySelectorAll('.pw-save-btn').forEach(btn => {
-    btn.addEventListener('click', () => changePassword(btn.dataset.sheet));
+    btn.addEventListener('click', () =>
+      changePassword(btn.dataset.sheet, btn.dataset.isNew === 'true')
+    );
+  });
+  container.querySelectorAll('.pw-remove-btn:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => removePassword(btn.dataset.sheet));
   });
   container.querySelectorAll('.pw-toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const input = container.querySelector(`.pw-input[data-sheet="${btn.dataset.sheet}"]`);
+      const input = container.querySelector(`.pw-input[data-sheet="${CSS.escape(btn.dataset.sheet)}"]`);
       if (input) input.type = input.type === 'password' ? 'text' : 'password';
     });
   });
-  // Enter で変更
   container.querySelectorAll('.pw-input').forEach(input => {
     input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') changePassword(input.dataset.sheet);
+      if (e.key !== 'Enter') return;
+      const isNew = !(input.dataset.sheet in registeredPasswords);
+      changePassword(input.dataset.sheet, isNew);
     });
   });
 }
 
-async function changePassword(sheetName) {
+async function changePassword(sheetName, isNew = false) {
   const input = document.querySelector(`.pw-input[data-sheet="${CSS.escape(sheetName)}"]`);
   if (!input) return;
   const newPw = input.value.trim();
 
-  if (!newPw) { toast('新しいパスワードを入力してください', 'error'); return; }
+  if (!newPw) { toast('パスワードを入力してください', 'error'); return; }
   if (newPw.length < 4) { toast('パスワードは4文字以上にしてください', 'error'); return; }
+
+  if (isNew && !confirm(
+    `「${sheetName}」を PASSWORDS に新規登録します。\nパスワード: ${newPw}\n\nよろしいですか？`
+  )) return;
 
   const btn = document.querySelector(`.pw-save-btn[data-sheet="${CSS.escape(sheetName)}"]`);
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
 
   try {
-    await API.updatePassword(adminPassword, sheetName, newPw);
+    const res = await API.updatePassword(adminPassword, sheetName, newPw, isNew, false);
     registeredPasswords[sheetName] = newPw;
     input.value = '';
-    toast(`「${sheetName}」のパスワードを変更しました`, 'success');
+    toast(res.message, 'success');
+    // 登録済→未登録の表示が変わるので再描画
+    renderPasswordList();
   } catch (e) {
-    toast('変更失敗: ' + e.message, 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '変更'; }
+    toast((isNew ? '登録' : '変更') + '失敗: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = isNew ? '登録' : '変更'; }
+  }
+}
+
+async function removePassword(sheetName) {
+  if (!confirm(
+    `「${sheetName}」を PASSWORDS から削除します。\n` +
+    `削除するとこのシートへのログインができなくなります。\n\nよろしいですか？`
+  )) return;
+
+  const btn = document.querySelector(`.pw-remove-btn[data-sheet="${CSS.escape(sheetName)}"]`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+
+  try {
+    const res = await API.updatePassword(adminPassword, sheetName, '', false, true);
+    delete registeredPasswords[sheetName];
+    toast(res.message, 'success');
+    renderPasswordList();
+  } catch (e) {
+    toast('削除失敗: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '削除'; }
   }
 }
 
