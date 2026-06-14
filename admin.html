@@ -589,61 +589,22 @@ function collectConfig() {
 }
 
 // ============================================================
-// configオブジェクト → config.js テキスト生成
+// configオブジェクト → config.js テキスト生成（安全版）
 // ============================================================
 function buildConfigJs(cfg) {
-  const sheetsStr = cfg.SHEETS.map(s => {
-    let lines = [
-      `      sheetName: ${JSON.stringify(s.sheetName)}`,
-      `      code: ${JSON.stringify(s.code)}`,
-      `      label: ${JSON.stringify(s.label)}`
-    ];
-    if (s.callBeforeMinutes   !== undefined) lines.push(`      callBeforeMinutes: ${s.callBeforeMinutes}`);
-    if (s.expireAfterMinutes  !== undefined) lines.push(`      expireAfterMinutes: ${s.expireAfterMinutes}`);
-    return `    {\n${lines.join(',\n')}\n    }`;
-  }).join(',\n');
+  // インデント幅2スペースでCONFIGオブジェクトを完璧なJSON文字列にする
+  const configJson = JSON.stringify(cfg, null, 2);
 
-  const statusesStr = Object.entries(cfg.STATUSES).map(([k, v]) =>
-    `    ${k}: { label: ${JSON.stringify(v.label)}, color: ${JSON.stringify(v.color)} }`
-  ).join(',\n');
-
+  // 前後の不要なインデントや改行を整えて、きれいなJavaScriptコードとして返却
   return `/**
  * 整理券システム 設定ファイル
  * このファイルは管理画面（admin.html）から自動更新されます。
  * 手動編集も可能ですが、管理画面での変更で上書きされます。
  */
 
-const CONFIG = {
-
-  GAS_URL: ${JSON.stringify(cfg.GAS_URL)},
-
-  GITHUB_OWNER: ${JSON.stringify(cfg.GITHUB_OWNER)},
-  GITHUB_REPO:  ${JSON.stringify(cfg.GITHUB_REPO)},
-  GITHUB_PATH:  ${JSON.stringify(cfg.GITHUB_PATH)},
-  GITHUB_BRANCH: ${JSON.stringify(cfg.GITHUB_BRANCH)},
-
-  SHEETS: [
-${sheetsStr}
-  ],
-
-  CALL_BEFORE_MINUTES: ${cfg.CALL_BEFORE_MINUTES},
-  POLL_INTERVAL_MS: ${cfg.POLL_INTERVAL_MS},
-
-  EXPIRE_AFTER_MINUTES: ${cfg.EXPIRE_AFTER_MINUTES},
-
-  QR_MODE: ${JSON.stringify(cfg.QR_MODE)},
-  COMMON_QR_VALUE: ${JSON.stringify(cfg.COMMON_QR_VALUE)},
-
-  STATUSES: {
-${statusesStr}
-  },
-
-  APP_TITLE: ${JSON.stringify(cfg.APP_TITLE)},
-  MONITOR_TITLE: ${JSON.stringify(cfg.MONITOR_TITLE)},
-  ADMIN_TITLE: ${JSON.stringify(cfg.ADMIN_TITLE)}
-};
+const CONFIG = ${configJson};
 `;
-}
+}  
 
 // ============================================================
 // 保存
