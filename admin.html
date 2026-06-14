@@ -386,7 +386,7 @@ async function loadConfig() {
  */
 function parseConfigJs(text) {
   // CONFIG オブジェクト部分を安全に取り出す
-  // 末尾のセミコロンを除去して eval
+  // ※マルチラインモードの $ の挙動による不具合を防ぐため、trim() を追加して処理します
   const match = text.match(/const\s+CONFIG\s*=\s*(\{[\s\S]*?\})\s*;?\s*$/m);
   if (!match) {
     // より寛容なマッチ
@@ -397,9 +397,13 @@ function parseConfigJs(text) {
     // eslint-disable-next-line no-new-func
     return Function('"use strict"; return (' + src + ')')();
   }
+  
+  // 【修正箇所】match[1] の末尾にあるセミコロンや空白をきれいに掃除する
+  const src1 = match[1].trim().replace(/;+$/, '').trim();
   // eslint-disable-next-line no-new-func
-  return Function('"use strict"; return (' + match[1] + ')')();
+  return Function('"use strict"; return (' + src1 + ')')();
 }
+
 
 document.getElementById('reload-btn').addEventListener('click', async () => {
   if (isDirty && !confirm('未保存の変更があります。再読み込みすると変更は失われます。続けますか？')) return;
