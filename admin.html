@@ -382,27 +382,17 @@ async function loadConfig() {
 
 /**
  * config.js のテキストから CONFIG オブジェクトを抽出する
- * "const CONFIG = { ... };" のJSONライクな部分を eval で取得
  */
 function parseConfigJs(text) {
-  // CONFIG オブジェクト部分を安全に取り出す
-  const match = text.match(/const\s+CONFIG\s*=\s*(\{[\s\S]*?\})\s*;?\s*$/m);
-  if (!match) {
-    // より寛容なマッチ
-    const match2 = text.match(/const\s+CONFIG\s*=\s*([\s\S]+)/);
-    if (!match2) throw new Error("config.js のパースに失敗しました");
-    // 末尾の ; と空白を除去
-    const src = match2[1].trim().replace(/;+$/, '').trim();
-    // eslint-disable-next-line no-new-func
-    return Function('"use strict"; return (' + src + ')')();
+  try {
+    // 正規表現による抽出は行末の '}' で誤判定を起こすため、
+    // JSコードとして全体を評価し、CONFIG変数を直接取得します。
+    return new Function(text + '\nreturn CONFIG;')();
+  } catch (e) {
+    console.error("パースエラー詳細:", e);
+    throw new Error("config.js のパースに失敗しました。構文エラーがあります。");
   }
-  
-  // 【修正箇所】match[1] の末尾にあるセミコロンや不要な空白・改行をきれいに掃除する
-  const src = match[1].trim().replace(/;+$/, '').trim();
-  // eslint-disable-next-line no-new-func
-  return Function('"use strict"; return (' + src + ')')();
 }
-
 
 
 document.getElementById('reload-btn').addEventListener('click', async () => {
