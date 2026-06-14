@@ -221,21 +221,26 @@ const API = (() => {
   }
 
   /**
-   * 指定シートのパスワードを変更
-   * @param {string} adminPassword
-   * @param {string} sheetName
-   * @param {string} newPassword
+   * 指定シートのパスワードを変更・新規登録・削除
+   * @param {string}  adminPassword
+   * @param {string}  sheetName
+   * @param {string}  newPassword    - remove=true のとき省略可
+   * @param {boolean} allowNew       - true で未登録シートへの新規追加を許可
+   * @param {boolean} remove         - true でPASSWORDSから削除
    */
-  async function updatePassword(adminPassword, sheetName, newPassword) {
+  async function updatePassword(adminPassword, sheetName, newPassword, allowNew = false, remove = false) {
     const res = await fetch(CONFIG.GAS_URL, {
       method  : "POST",
       headers : { "Content-Type": "text/plain" },
-      body    : JSON.stringify({ action: "updatePassword", adminPassword, sheetName, newPassword })
+      body    : JSON.stringify({
+        action: "updatePassword", adminPassword,
+        sheetName, newPassword, allowNew, remove
+      })
     });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
     if (!data.success) throw new Error(data.message || "変更失敗");
-    return data; // { success, message }
+    return data; // { success, message, isNew }
   }
 
   return {
