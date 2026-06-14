@@ -372,6 +372,9 @@ async function loadConfig() {
     isDirty = false;
     updateDirtyBadge();
   } catch (e) {
+      // ブラウザのコンソール（F12）に詳細を出力
+  console.error("エラーの詳細:", e);
+  console.log("APIから届いた生データ:", res.content); // resが定義されていれば
     document.getElementById('loading-state').innerHTML =
       `<span class="text-danger">読み込み失敗: ${e.message}</span>`;
   }
