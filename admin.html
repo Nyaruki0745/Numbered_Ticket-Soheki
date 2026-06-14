@@ -386,7 +386,7 @@ async function loadConfig() {
  */
 function parseConfigJs(text) {
   // CONFIG オブジェクト部分を安全に取り出す
-  // ※マルチラインモードの $ の挙動による不具合を防ぐため、trim() を追加して処理します
+  // 末尾のセミコロンを除去して eval
   const match = text.match(/const\s+CONFIG\s*=\s*(\{[\s\S]*?\})\s*;?\s*$/m);
   if (!match) {
     // より寛容なマッチ
@@ -397,11 +397,8 @@ function parseConfigJs(text) {
     // eslint-disable-next-line no-new-func
     return Function('"use strict"; return (' + src + ')')();
   }
-  
-  // 【修正箇所】match[1] の末尾にあるセミコロンや空白をきれいに掃除する
-  const src1 = match[1].trim().replace(/;+$/, '').trim();
   // eslint-disable-next-line no-new-func
-  return Function('"use strict"; return (' + src1 + ')')();
+  return Function('"use strict"; return (' + match[1] + ')')();
 }
 
 
