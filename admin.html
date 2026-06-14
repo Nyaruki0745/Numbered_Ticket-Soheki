@@ -386,20 +386,23 @@ async function loadConfig() {
  */
 function parseConfigJs(text) {
   // CONFIG オブジェクト部分を安全に取り出す
-  // 末尾のセミコロンを除去して eval
   const match = text.match(/const\s+CONFIG\s*=\s*(\{[\s\S]*?\})\s*;?\s*$/m);
   if (!match) {
     // より寛容なマッチ
     const match2 = text.match(/const\s+CONFIG\s*=\s*([\s\S]+)/);
     if (!match2) throw new Error("config.js のパースに失敗しました");
-    // 末尾の ; を除去して eval
-    const src = match2[1].replace(/;\s*$/, '').trim();
+    // 末尾の ; と空白を除去
+    const src = match2[1].trim().replace(/;+$/, '').trim();
     // eslint-disable-next-line no-new-func
     return Function('"use strict"; return (' + src + ')')();
   }
+  
+  // 【修正箇所】match[1] の末尾にあるセミコロンや不要な空白・改行をきれいに掃除する
+  const src = match[1].trim().replace(/;+$/, '').trim();
   // eslint-disable-next-line no-new-func
-  return Function('"use strict"; return (' + match[1] + ')')();
+  return Function('"use strict"; return (' + src + ')')();
 }
+
 
 
 document.getElementById('reload-btn').addEventListener('click', async () => {
