@@ -27,14 +27,15 @@ const CONFIG = {
     {
       sheetName: "DebugC",
       code: "XC1",
-      label: "C組デバッグ用シート"
+      label: "C組デバッグ用シート",
+      expireAfterMinutes: 5
     }
   ],
 
   CALL_BEFORE_MINUTES: 0,
   POLL_INTERVAL_MS: 15000,
 
-  EXPIRE_AFTER_MINUTES: 3,
+  EXPIRE_AFTER_MINUTES: 0,
 
   QR_MODE: "number",
   COMMON_QR_VALUE: "SEIRIKEN_CHECK",
