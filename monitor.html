@@ -204,17 +204,12 @@ body {
   <div id="monitor-login">
     <div style="font-size:2rem;">📺</div>
     <h2 id="monitor-title-login">呼出モニター</h2>
-    <p class="sub">シートとパスワードを選択してください</p>
+    <p class="sub">表示するシートを選択してください</p>
 
     <div id="monitor-login-form">
       <div class="field">
         <label for="mon-sheet-select">シート選択</label>
         <select id="mon-sheet-select"></select>
-      </div>
-      <div class="field">
-        <label for="mon-password">パスワード（4桁）</label>
-        <input type="password" id="mon-password" maxlength="4" inputmode="numeric"
-          placeholder="••••">
       </div>
       <button class="btn btn-primary" id="mon-login-btn">モニターを開始</button>
       <p id="mon-login-error" class="text-danger" style="font-size:0.83rem;text-align:center;min-height:1.2em;"></p>
@@ -273,30 +268,12 @@ function startClock() {
 }
 
 // ============================================================
-// ログイン
+// ログイン（シート選択のみ・パスワード不要）
 // ============================================================
-document.getElementById('mon-login-btn').addEventListener('click', async () => {
+document.getElementById('mon-login-btn').addEventListener('click', () => {
   const idx   = parseInt(document.getElementById('mon-sheet-select').value, 10);
-  const pw    = document.getElementById('mon-password').value;
   const sheet = CONFIG.SHEETS[idx];
-  const errEl = document.getElementById('mon-login-error');
-  errEl.textContent = '';
-
-  // PW照合はGAS側のスクリプトプロパティで行う（フロントにPWは保持しない）
-  try {
-    await API.auth(sheet.sheetName, pw);
-    API.setSession(sheet, pw);  // PWはメモリのみ
-    startMonitor();
-  } catch(e) {
-    errEl.textContent = e.message.includes('認証失敗') || e.message.includes('正しくありません')
-      ? 'パスワードが違います'
-      : 'サーバーエラー: ' + e.message;
-  }
-});
-
-// Enterキーでログイン
-document.getElementById('mon-password').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('mon-login-btn').click();
+  startMonitor(sheet.sheetName);
 });
 
 // ============================================================
@@ -304,16 +281,17 @@ document.getElementById('mon-password').addEventListener('keydown', e => {
 // ============================================================
 let pollTimer = null;
 let activeSheetIdx = 0;
+let activeSheetName = '';
 
-function startMonitor() {
+function startMonitor(sheetName) {
   document.getElementById('monitor-login').style.display = 'none';
   document.getElementById('monitor-body').classList.add('show');
 
   buildSheetSelectorBar();
 
-  // アクティブシートを現在のセッションに合わせる
-  activeSheetIdx = CONFIG.SHEETS.findIndex(s => s.sheetName === API.getSession().sheetName);
+  activeSheetIdx  = CONFIG.SHEETS.findIndex(s => s.sheetName === sheetName);
   if (activeSheetIdx < 0) activeSheetIdx = 0;
+  activeSheetName = CONFIG.SHEETS[activeSheetIdx].sheetName;
   updateSheetSelectorUI();
 
   fetchAndRender();
@@ -328,11 +306,8 @@ function buildSheetSelectorBar() {
     btn.className = 'sheet-sel-btn';
     btn.textContent = s.label;
     btn.addEventListener('click', () => {
-      activeSheetIdx = i;
-      // シート切替時：同じPWでセッションのsheetNameだけ差し替え
-      // （PWはログイン時に入力済みのものをそのまま引き継ぐ）
-      const currentPw = API.getPassword();
-      API.setSession(CONFIG.SHEETS[i], currentPw);
+      activeSheetIdx  = i;
+      activeSheetName = CONFIG.SHEETS[i].sheetName;
       updateSheetSelectorUI();
       fetchAndRender();
     });
@@ -359,9 +334,7 @@ async function fetchAndRender() {
   status.textContent = '更新中...';
 
   try {
-    // API.setSession済みのシートで getCallingList を呼ぶ
-    // _enteredPassword は api.js の request() が自動付与するため引数不要
-    const res = await API.getCallingList();
+    const res = await API.getCallingList(activeSheetName);
     renderCallingList(res.list || []);
     status.textContent = '接続中';
   } catch(e) {
