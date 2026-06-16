@@ -6,7 +6,7 @@
 
 const CONFIG = {
 
-  GAS_URL: "https://script.google.com/macros/s/AKfycbz8WeAE2qiI1Ibshfj2CEDu9Hh-0twm_gf0FKOPPM3dyBwjBak5ATBBbPCXX2eFuYcFdw/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbwy7_htSLYnLopY422mqV4xX0clPbfkR03nkVwnfFbzrbI8JaFSG9hlvbaLIjW3uagVDw/exec",
 
   GITHUB_OWNER: "Nyaruki0745",
   GITHUB_REPO:  "Numbered_Ticket-Soheki",
