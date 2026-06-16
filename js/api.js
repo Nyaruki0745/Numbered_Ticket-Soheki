@@ -128,12 +128,25 @@ const API = (() => {
    * 呼出リスト取得（モニター用）
    * セッションがない場合でも sheetName/password を直接渡せる
    */
-  async function getCallingList() {
-    // _enteredPassword は request() が自動付与するため引数不要
-    return request("getCallingList", {
-      callBeforeMinutes : CONFIG.CALL_BEFORE_MINUTES
+  /**
+   * 呼出リスト取得（モニター用）
+   * パスワード認証不要（GAS側で getCallingList は認証スキップされる）
+   * @param {string} sheetName
+   */
+  async function getCallingList(sheetName) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({
+        action            : "getCallingList",
+        sheetName,
+        callBeforeMinutes : CONFIG.CALL_BEFORE_MINUTES
+      })
     });
-    // GASが返す: { success, list: [{ ticketNumber, count, startTime, endTime, status }] }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "取得失敗");
+    return data; // { success, list: [{ ticketNumber, count, startTime, endTime, status }] }
   }
 
   function getPassword() {
@@ -243,9 +256,44 @@ const API = (() => {
     return data; // { success, message, isNew }
   }
 
+  /**
+   * シート（タブ）そのものをスプレッドシートから削除する
+   * @param {string} adminPassword
+   * @param {string} sheetName
+   */
+  async function deleteSheetTab(adminPassword, sheetName) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({ action: "deleteSheetTab", adminPassword, sheetName })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "削除失敗");
+    return data; // { success, message }
+  }
+
+  /**
+   * 指定シートのデータ行のみ削除する（ヘッダー・シート自体は残す）
+   * @param {string} adminPassword
+   * @param {string} sheetName
+   */
+  async function clearSheetData(adminPassword, sheetName) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({ action: "clearSheetData", adminPassword, sheetName })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "削除失敗");
+    return data; // { success, message, deletedRows }
+  }
+
   return {
     setSession, getSession, getPassword, clearSession, hasSession,
     auth, register, lookup, updateStatus, getStats, getCallingList,
-    adminAuth, getConfig, saveConfig, getPasswords, updatePassword
+    adminAuth, getConfig, saveConfig, getPasswords, updatePassword,
+    deleteSheetTab, clearSheetData
   };
 })();
