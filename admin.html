@@ -483,6 +483,10 @@ function renderSheetCard(sheet, index) {
         <div class="field-hint">空欄=グローバル設定を使用</div>
       </div>
     </div>
+    <label class="override-toggle">
+      <input type="checkbox" class="f-auto-absent" ${sheet.autoAbsentEnabled ? 'checked' : ''}>
+      予約終了時間〜失効時間の間、呼出中の券を自動で「不在」にする
+    </label>
   `;
   container.appendChild(card);
 
@@ -617,13 +621,15 @@ function collectConfig() {
     const label     = card.querySelector('.f-label').value.trim();
     if (!sheetName || !code) return; // 空欄は除外
 
-    const overrideEnabled = card.querySelector('.f-override-check').checked;
-    const callVal   = card.querySelector('.f-call').value;
-    const expireVal = card.querySelector('.f-expire').value;
+    const overrideEnabled  = card.querySelector('.f-override-check').checked;
+    const callVal          = card.querySelector('.f-call').value;
+    const expireVal        = card.querySelector('.f-expire').value;
+    const autoAbsentChecked = card.querySelector('.f-auto-absent').checked;
 
     const s = { sheetName, code, label };
     if (overrideEnabled && callVal   !== '') s.callBeforeMinutes   = parseInt(callVal, 10);
     if (overrideEnabled && expireVal !== '') s.expireAfterMinutes  = parseInt(expireVal, 10);
+    if (autoAbsentChecked) s.autoAbsentEnabled = true;
     sheets.push(s);
   });
 
@@ -665,6 +671,7 @@ function buildConfigJs(cfg) {
     ];
     if (s.callBeforeMinutes   !== undefined) lines.push(`      callBeforeMinutes: ${s.callBeforeMinutes}`);
     if (s.expireAfterMinutes  !== undefined) lines.push(`      expireAfterMinutes: ${s.expireAfterMinutes}`);
+    if (s.autoAbsentEnabled   !== undefined) lines.push(`      autoAbsentEnabled: ${s.autoAbsentEnabled}`);
     return `    {\n${lines.join(',\n')}\n    }`;
   }).join(',\n');
 
@@ -723,6 +730,10 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   }
 
   const newContent = buildConfigJs(newCfg);
+  const autoAbsentSheets = newCfg.SHEETS
+    .filter(s => s.autoAbsentEnabled)
+    .map(s => s.sheetName);
+
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> 保存中...';
@@ -733,7 +744,8 @@ document.getElementById('save-btn').addEventListener('click', async () => {
       adminPassword,
       newContent,
       currentSha,
-      'chore: update config.js via admin panel'
+      'chore: update config.js via admin panel',
+      autoAbsentSheets
     );
     currentSha = res.newSha || currentSha;
     configObj  = newCfg;
