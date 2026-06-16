@@ -372,9 +372,6 @@ async function loadConfig() {
     isDirty = false;
     updateDirtyBadge();
   } catch (e) {
-      // ブラウザのコンソール（F12）に詳細を出力
-  console.error("エラーの詳細:", e);
-  console.log("APIから届いた生データ:", res.content); // resが定義されていれば
     document.getElementById('loading-state').innerHTML =
       `<span class="text-danger">読み込み失敗: ${e.message}</span>`;
   }
@@ -382,18 +379,24 @@ async function loadConfig() {
 
 /**
  * config.js のテキストから CONFIG オブジェクトを抽出する
+ * "const CONFIG = { ... };" のJSONライクな部分を eval で取得
  */
 function parseConfigJs(text) {
-  try {
-    // 正規表現による抽出は行末の '}' で誤判定を起こすため、
-    // JSコードとして全体を評価し、CONFIG変数を直接取得します。
-    return new Function(text + '\nreturn CONFIG;')();
-  } catch (e) {
-    console.error("パースエラー詳細:", e);
-    throw new Error("config.js のパースに失敗しました。構文エラーがあります。");
+  // CONFIG オブジェクト部分を安全に取り出す
+  // 末尾のセミコロンを除去して eval
+  const match = text.match(/const\s+CONFIG\s*=\s*(\{[\s\S]*?\})\s*;?\s*$/m);
+  if (!match) {
+    // より寛容なマッチ
+    const match2 = text.match(/const\s+CONFIG\s*=\s*([\s\S]+)/);
+    if (!match2) throw new Error("config.js のパースに失敗しました");
+    // 末尾の ; を除去して eval
+    const src = match2[1].replace(/;\s*$/, '').trim();
+    // eslint-disable-next-line no-new-func
+    return Function('"use strict"; return (' + src + ')')();
   }
+  // eslint-disable-next-line no-new-func
+  return Function('"use strict"; return (' + match[1] + ')')();
 }
-
 
 document.getElementById('reload-btn').addEventListener('click', async () => {
   if (isDirty && !confirm('未保存の変更があります。再読み込みすると変更は失われます。続けますか？')) return;
@@ -442,7 +445,10 @@ function renderSheetCard(sheet, index) {
   card.innerHTML = `
     <div class="sheet-card-header">
       <span class="sheet-card-label"># ${index + 1}</span>
-      <button class="btn btn-danger btn-sm remove-sheet-btn" data-index="${index}">削除</button>
+      <div style="display:flex;gap:0.4rem;">
+        <button class="btn btn-ghost btn-sm clear-data-btn" data-index="${index}" title="シート内のデータ行のみ削除（ヘッダー・タブは残る）">データ削除</button>
+        <button class="btn btn-danger btn-sm remove-sheet-btn" data-index="${index}" title="config設定とスプレッドシートのタブを両方削除">シート削除</button>
+      </div>
     </div>
     <div class="sheet-card-fields">
       <div class="field">
@@ -486,12 +492,73 @@ function renderSheetCard(sheet, index) {
     fields.classList.toggle('show', this.checked);
     markDirty();
   });
-  // 削除ボタン
-  card.querySelector('.remove-sheet-btn').addEventListener('click', () => {
-    if (!confirm(`シート「${sheet.sheetName}」の設定を削除しますか？\n（スプレッドシート本体は削除されません）`)) return;
+
+  // データのみ削除ボタン（シート・config設定は残す）
+  card.querySelector('.clear-data-btn').addEventListener('click', async () => {
+    const currentName = card.querySelector('.f-sheetName').value.trim();
+    if (!currentName) { toast('シート名が空欄です', 'error'); return; }
+
+    if (!confirm(
+      `シート「${currentName}」のデータ行をすべて削除します。\n` +
+      `（ヘッダー行・シートタブ・config設定は残ります）\n\nよろしいですか？`
+    )) return;
+
+    const btn = card.querySelector('.clear-data-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const res = await API.clearSheetData(adminPassword, currentName);
+      toast(res.message, 'success');
+    } catch (e) {
+      toast('データ削除失敗: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'データ削除';
+    }
+  });
+
+  // シート削除ボタン（タブ本体 + config設定 + PASSWORDS を削除）
+  card.querySelector('.remove-sheet-btn').addEventListener('click', async () => {
+    const currentName = card.querySelector('.f-sheetName').value.trim();
+
+    if (!confirm(
+      `シート「${currentName || '(未入力)'}」を完全に削除します。\n` +
+      `・スプレッドシートのタブ本体ごと削除されます\n` +
+      `・config.js の設定からも削除されます\n` +
+      `・登録済みパスワードも削除されます\n\n` +
+      `この操作は取り消せません。よろしいですか？`
+    )) return;
+
+    const btn = card.querySelector('.remove-sheet-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+
+    // シート名が入力済み（既存シート）の場合のみGAS側でタブを削除
+    if (currentName) {
+      try {
+        await API.deleteSheetTab(adminPassword, currentName);
+        toast(`タブ「${currentName}」を削除しました`, 'success');
+      } catch (e) {
+        // タブ削除に失敗してもconfigからの削除は続行できるよう確認する
+        const proceed = confirm(
+          `スプレッドシートのタブ削除に失敗しました: ${e.message}\n` +
+          `config設定からの削除のみ続行しますか？`
+        );
+        if (!proceed) {
+          btn.disabled = false;
+          btn.textContent = 'シート削除';
+          return;
+        }
+      }
+    }
+
     card.remove();
     reindexSheets();
     markDirty();
+    // パスワードリストにも反映
+    delete registeredPasswords[currentName];
+    renderPasswordList();
   });
 }
 
@@ -501,6 +568,7 @@ function reindexSheets() {
     card.dataset.index = i;
     card.querySelector('.sheet-card-label').textContent = `# ${i + 1}`;
     card.querySelector('.remove-sheet-btn').dataset.index = i;
+    card.querySelector('.clear-data-btn').dataset.index = i;
   });
 }
 
