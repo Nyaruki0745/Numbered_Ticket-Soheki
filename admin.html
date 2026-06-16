@@ -379,23 +379,48 @@ async function loadConfig() {
 
 /**
  * config.js のテキストから CONFIG オブジェクトを抽出する
- * "const CONFIG = { ... };" のJSONライクな部分を eval で取得
+ * "const CONFIG = { ... };" の部分を取り出して評価する。
+ *
+ * 注意: 正規表現の非貪欲マッチ（[\s\S]*?\}）は、STATUSES などの
+ *       ネストしたオブジェクト内の最初の "}" で止まってしまい、
+ *       本体が途中で切れて構文エラー（Unexpected token ')'）になる。
+ *       そのため、波括弧の対応を1文字ずつ数えて正しい終端を探す。
  */
 function parseConfigJs(text) {
-  // CONFIG オブジェクト部分を安全に取り出す
-  // 末尾のセミコロンを除去して eval
-  const match = text.match(/const\s+CONFIG\s*=\s*(\{[\s\S]*?\})\s*;?\s*$/m);
-  if (!match) {
-    // より寛容なマッチ
-    const match2 = text.match(/const\s+CONFIG\s*=\s*([\s\S]+)/);
-    if (!match2) throw new Error("config.js のパースに失敗しました");
-    // 末尾の ; を除去して eval
-    const src = match2[1].replace(/;\s*$/, '').trim();
-    // eslint-disable-next-line no-new-func
-    return Function('"use strict"; return (' + src + ')')();
+  const startKeyword = 'const CONFIG';
+  const startIdx = text.indexOf(startKeyword);
+  if (startIdx === -1) throw new Error("config.js 内に 'const CONFIG' が見つかりません");
+
+  const braceStart = text.indexOf('{', startIdx);
+  if (braceStart === -1) throw new Error("CONFIG オブジェクトの開始 '{' が見つかりません");
+
+  // 波括弧の対応をカウントして、CONFIGオブジェクトの終端 "}" を特定する
+  // 文字列リテラル内の { } は誤検出しないよう、シングル/ダブル/テンプレート文字列をスキップする
+  let depth = 0;
+  let i = braceStart;
+  let inString = null; // null | '"' | "'" | '`'
+
+  for (; i < text.length; i++) {
+    const ch = text[i];
+    const prev = text[i - 1];
+
+    if (inString) {
+      if (ch === inString && prev !== '\\') inString = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') { inString = ch; continue; }
+    if (ch === '{') depth++;
+    if (ch === '}') {
+      depth--;
+      if (depth === 0) { i++; break; } // 終端の "}" を含めて抜ける
+    }
   }
+
+  if (depth !== 0) throw new Error("CONFIG オブジェクトの波括弧が閉じていません");
+
+  const src = text.slice(braceStart, i);
   // eslint-disable-next-line no-new-func
-  return Function('"use strict"; return (' + match[1] + ')')();
+  return Function('"use strict"; return (' + src + ')')();
 }
 
 document.getElementById('reload-btn').addEventListener('click', async () => {
