@@ -18,8 +18,8 @@ const CONFIG = {
   // path:  config.jsのリポジトリ内パス（通常は "config.js"）
   // branch: ブランチ名（通常は "main"）
   // -------------------------------------------------------
-  GITHUB_OWNER: "your-github-username",
-  GITHUB_REPO:  "your-repo-name",
+  GITHUB_OWNER: "Nyaruki0745",
+  GITHUB_REPO:  "Numbered_Ticket-Soheki",
   GITHUB_PATH:  "config.js",
   GITHUB_BRANCH: "main",
 
