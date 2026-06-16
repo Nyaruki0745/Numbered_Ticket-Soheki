@@ -198,7 +198,15 @@ const API = (() => {
    * @param {string} sha     - getConfigで取得したSHA
    * @param {string} commitMessage
    */
-  async function saveConfig(adminPassword, content, sha, commitMessage) {
+  /**
+   * @param {string} adminPassword
+   * @param {string} content - 新しいconfig.jsのテキスト全体
+   * @param {string} sha     - getConfigで取得したSHA
+   * @param {string} commitMessage
+   * @param {string[]} autoAbsentSheets - autoAbsentEnabled:true のシート名一覧
+   *        （autoExpire が毎分参照するスクリプトプロパティに同期される）
+   */
+  async function saveConfig(adminPassword, content, sha, commitMessage, autoAbsentSheets) {
     const res = await fetch(CONFIG.GAS_URL, {
       method  : "POST",
       headers : { "Content-Type": "text/plain" },
@@ -211,7 +219,8 @@ const API = (() => {
         branch        : CONFIG.GITHUB_BRANCH,
         content,
         sha,
-        commitMessage
+        commitMessage,
+        autoAbsentSheets: autoAbsentSheets || []
       })
     });
     if (!res.ok) throw new Error("HTTP " + res.status);
