@@ -17,7 +17,8 @@ const CONFIG = {
     {
       sheetName: "DebugB",
       code: "XB1",
-      label: "B組デバッグ用シート"
+      label: "B組デバッグ用シート",
+      expireAfterMinutes: 5
     },
     {
       sheetName: "DebugC",
