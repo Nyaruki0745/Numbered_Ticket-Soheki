@@ -15,9 +15,9 @@ const CONFIG = {
 
   SHEETS: [
     {
-      sheetName: "Debug",
+      sheetName: "DebugA",
       code: "X01",
-      label: "デバッグ1"
+      label: "A組デバッグシート"
     },
     {
       sheetName: "DebugB",
