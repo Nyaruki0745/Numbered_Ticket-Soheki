@@ -28,7 +28,8 @@ const CONFIG = {
     {
       sheetName: "DebugC",
       code: "XC1",
-      label: "C組用デバッグシート"
+      label: "C組用デバッグシート",
+      autoAbsentEnabled: true
     }
   ],
 
