@@ -299,9 +299,27 @@ const API = (() => {
     return data; // { success, message, deletedRows }
   }
 
+  /** 時間帯別統計取得（統計画面用） */
+  async function getTimeslotStats(sheetName, password) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method  : "POST",
+      headers : { "Content-Type": "text/plain" },
+      body    : JSON.stringify({
+        action   : "getTimeslotStats",
+        sheetName,
+        password
+      })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "取得失敗");
+    return data; // { success, timeslots: [...] }
+  }
+
   return {
     setSession, getSession, getPassword, clearSession, hasSession,
     auth, register, lookup, updateStatus, getStats, getCallingList,
+    getTimeslotStats,
     adminAuth, getConfig, saveConfig, getPasswords, updatePassword,
     deleteSheetTab, clearSheetData
   };
