@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>統計モニター</title>
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ===== 統計モニター固有スタイル ===== */
+body { background: #080c14; }
+
+#stats-app { height: 100vh; display: flex; flex-direction: column; }
+
+/* ── ヘッダーバー ── */
+#stats-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.65rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: #0a0f1c;
+  flex-shrink: 0;
+  gap: 1rem;
+}
+#stats-header h1 { font-size: 1rem; font-weight: 700; }
+#stats-clock {
+  font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700;
+  color: var(--text); letter-spacing: 0.08em;
+}
+.header-meta { display: flex; align-items: center; gap: 0.75rem; font-size: 0.78rem; color: var(--text3); }
+.poll-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); transition: background 0.3s; }
+.poll-dot.active { background: var(--success); }
+
+/* ── シート選択バー ── */
+#sheet-bar {
+  display: flex; gap: 0.4rem; flex-wrap: wrap;
+  padding: 0.5rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: #0a0f1c;
+  flex-shrink: 0;
+}
+.sheet-sel-btn {
+  padding: 0.28rem 0.85rem; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border2); background: transparent; color: var(--text2);
+  transition: all 0.15s;
+}
+.sheet-sel-btn.active {
+  background: var(--accent-dim); border-color: var(--accent); color: var(--accent);
+}
+
+/* ── ログイン画面 ── */
+#login-screen {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0;
+}
+#login-screen .logo { font-size: 2.5rem; margin-bottom: 0.25rem; }
+#login-screen h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem; }
+#login-screen .sub { color: var(--text2); font-size: 0.85rem; margin-bottom: 2rem; }
+#login-form { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 1rem; }
+
+/* ── 本体 ── */
+#stats-body { flex: 1; overflow-y: auto; padding: 1rem 1.5rem 2rem; display: none; }
+#stats-body.show { display: block; }
+
+/* ── サマリーバー ── */
+#summary-bar {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0.5rem; margin-bottom: 1.25rem;
+}
+.sum-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.6rem 0.75rem; text-align: center;
+}
+.sum-card .num {
+  font-size: 1.6rem; font-weight: 800; font-family: var(--font-mono); line-height: 1.1;
+}
+.sum-card .lbl { font-size: 0.7rem; color: var(--text2); margin-top: 0.2rem; }
+
+/* ── タイムスロットカード ── */
+.slot-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); margin-bottom: 0.75rem;
+  overflow: hidden; transition: border-color 0.3s;
+}
+
+/* 時間帯ステータスによる左ボーダー色 */
+.slot-card.slot-予約受付中 { border-left: 4px solid #6f9eff; }
+.slot-card.slot-進行中     { border-left: 4px solid #22c589; animation: pulse-green 2s ease-in-out infinite; }
+.slot-card.slot-呼出中     { border-left: 4px solid #f0c040; animation: pulse-amber 2s ease-in-out infinite; }
+.slot-card.slot-終了済     { border-left: 4px solid #f97316; }
+.slot-card.slot-失効済     { border-left: 4px solid #6b7280; opacity: 0.6; }
+
+@keyframes pulse-green {
+  0%,100% { box-shadow: 0 0 0 0 rgba(34,197,137,0); }
+  50%      { box-shadow: 0 0 0 4px rgba(34,197,137,0.1); }
+}
+@keyframes pulse-amber {
+  0%,100% { box-shadow: 0 0 0 0 rgba(240,192,64,0); }
+  50%      { box-shadow: 0 0 0 4px rgba(240,192,64,0.12); }
+}
+
+.slot-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+.slot-time {
+  font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700; color: var(--text);
+}
+.slot-status-badge {
+  font-size: 0.78rem; font-weight: 700; padding: 0.2rem 0.7rem;
+  border-radius: 999px; letter-spacing: 0.03em;
+}
+.badge-予約受付中 { background: rgba(79,124,255,0.15); color: #6f9eff; }
+.badge-進行中     { background: rgba(34,197,137,0.18); color: #22c589; }
+.badge-呼出中     { background: rgba(240,192,64,0.18); color: #f0c040; }
+.badge-終了済     { background: rgba(249,115,22,0.15); color: #f97316; }
+.badge-失効済     { background: rgba(107,114,128,0.15); color: #9ca3af; }
+
+.slot-body {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 0; padding: 0;
+}
+.slot-metric {
+  padding: 0.7rem 1rem; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 0.1rem;
+}
+.slot-metric:last-child { border-right: none; }
+.slot-metric .m-label { font-size: 0.72rem; color: var(--text2); }
+.slot-metric .m-value {
+  font-size: 1.4rem; font-weight: 800; font-family: var(--font-mono); line-height: 1.1;
+}
+.slot-metric .m-detail {
+  font-size: 0.7rem; color: var(--text3); font-family: var(--font-mono); margin-top: 0.1rem;
+}
+
+/* 合計グループ数が0の場合はカードを薄く */
+.slot-card.empty { opacity: 0.4; }
+
+/* 空状態 */
+#empty-state {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 40vh; gap: 0.75rem; color: var(--text3);
+}
+.empty-icon { font-size: 3rem; opacity: 0.3; }
+</style>
+</head>
+<body>
+
+<div id="stats-app">
+
+  <!-- ヘッダー（常時表示） -->
+  <div id="stats-header">
+    <h1>📊 <span id="stats-title-header">統計モニター</span></h1>
+    <div id="stats-clock">--:--:--</div>
+    <div class="header-meta">
+      <div class="poll-dot" id="poll-dot"></div>
+      <span id="poll-status">待機中</span>
+      <a href="index.html" class="btn btn-ghost btn-sm" style="font-size:0.75rem;">← スタッフ画面</a>
+    </div>
+  </div>
+
+  <!-- ログイン画面 -->
+  <div id="login-screen">
+    <div class="logo">📊</div>
+    <h2 id="stats-title-login">統計モニター</h2>
+    <p class="sub">シートとパスワードを入力してください</p>
+    <div id="login-form">
+      <div class="field">
+        <label for="stat-sheet-select">シート選択</label>
+        <select id="stat-sheet-select"></select>
+      </div>
+      <div class="field">
+        <label for="stat-password">パスワード（4桁）</label>
+        <input type="password" id="stat-password" maxlength="4"
+          inputmode="numeric" placeholder="••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" id="stat-login-btn">モニターを開始</button>
+      <p id="stat-login-error" class="text-danger"
+        style="font-size:0.85rem;text-align:center;min-height:1.2em;"></p>
+    </div>
+  </div>
+
+  <!-- シート選択バー（ログイン後） -->
+  <div id="sheet-bar" style="display:none;"></div>
+
+  <!-- 統計本体 -->
+  <div id="stats-body">
+
+    <!-- サマリーバー -->
+    <div id="summary-bar"></div>
+
+    <!-- 時間帯リスト -->
+    <div id="slot-list"></div>
+
+  </div>
+
+</div>
+
+<div id="toast-container"></div>
+
+<script src="config.js"></script>
+<script src="js/api.js"></script>
+<script>
+// ============================================================
+// 状態
+// ============================================================
+let session = null;  // { sheetName, password, label }
+let pollTimer = null;
+let activeSheetIdx = 0;
+
+// ============================================================
+// 初期化
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  document.title = (CONFIG.STATS_TITLE || '統計モニター');
+  document.getElementById('stats-title-header').textContent = CONFIG.STATS_TITLE || '統計モニター';
+  document.getElementById('stats-title-login').textContent  = CONFIG.STATS_TITLE || '統計モニター';
+  buildSheetSelect();
+  startClock();
+
+  document.getElementById('stat-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('stat-login-btn').click();
+  });
+});
+
+function buildSheetSelect() {
+  const sel = document.getElementById('stat-sheet-select');
+  CONFIG.SHEETS.forEach((s, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = s.label;
+    sel.appendChild(opt);
+  });
+}
+
+// ============================================================
+// 時計
+// ============================================================
+function startClock() {
+  const tick = () => {
+    document.getElementById('stats-clock').textContent =
+      new Date().toLocaleTimeString('ja-JP', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      });
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+// ============================================================
+// ログイン
+// ============================================================
+document.getElementById('stat-login-btn').addEventListener('click', async () => {
+  const idx    = parseInt(document.getElementById('stat-sheet-select').value, 10);
+  const pw     = document.getElementById('stat-password').value.trim();
+  const errEl  = document.getElementById('stat-login-error');
+  const sheet  = CONFIG.SHEETS[idx];
+  errEl.textContent = '';
+  if (!pw) { errEl.textContent = 'パスワードを入力してください'; return; }
+
+  const btn = document.getElementById('stat-login-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    await API.auth(sheet.sheetName, pw);
+    session = { sheetName: sheet.sheetName, password: pw, label: sheet.label };
+    API.setSession(sheet, pw);
+    startStats();
+  } catch (e) {
+    errEl.textContent = e.message.includes('パスワード') ? 'パスワードが違います'
+      : 'エラー: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'モニターを開始';
+  }
+});
+
+// ============================================================
+// 統計モニター開始
+// ============================================================
+function startStats() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('stats-body').classList.add('show');
+
+  buildSheetBar();
+  activeSheetIdx = CONFIG.SHEETS.findIndex(s => s.sheetName === session.sheetName);
+  if (activeSheetIdx < 0) activeSheetIdx = 0;
+  updateSheetBarUI();
+
+  fetchAndRender();
+  pollTimer = setInterval(fetchAndRender, CONFIG.POLL_INTERVAL_MS);
+}
+
+function buildSheetBar() {
+  const bar = document.getElementById('sheet-bar');
+  bar.innerHTML = '';
+  CONFIG.SHEETS.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'sheet-sel-btn';
+    btn.textContent = s.label;
+    btn.id = 'sheetbtn-' + i;
+    btn.addEventListener('click', () => {
+      activeSheetIdx = i;
+      session = { sheetName: s.sheetName, password: session.password, label: s.label };
+      API.setSession(CONFIG.SHEETS[i], session.password);
+      updateSheetBarUI();
+      fetchAndRender();
+    });
+    bar.appendChild(btn);
+  });
+  bar.style.display = 'flex';
+}
+
+function updateSheetBarUI() {
+  CONFIG.SHEETS.forEach((_, i) => {
+    const b = document.getElementById('sheetbtn-' + i);
+    if (b) b.classList.toggle('active', i === activeSheetIdx);
+  });
+}
+
+// ============================================================
+// データ取得・描画
+// ============================================================
+async function fetchAndRender() {
+  const dot = document.getElementById('poll-dot');
+  const statusEl = document.getElementById('poll-status');
+  dot.classList.add('active');
+  statusEl.textContent = '更新中...';
+
+  try {
+    const res = await API.getTimeslotStats(session.sheetName, session.password);
+    renderSummary(res.timeslots);
+    renderSlots(res.timeslots);
+    statusEl.textContent = '接続中';
+  } catch (e) {
+    statusEl.textContent = 'エラー: ' + e.message;
+  } finally {
+    setTimeout(() => dot.classList.remove('active'), 600);
+  }
+}
+
+// ── サマリーバー ──────────────────────────────
+function renderSummary(timeslots) {
+  const totals = { total:0, reserved:0, calling:0, received:0, entered:0, absent:0, expired:0 };
+  timeslots.forEach(sl => {
+    Object.keys(totals).forEach(k => { totals[k] += (sl.counts[k] || 0); });
+  });
+
+  const items = [
+    { key:'total',    label:'合計',   color:'var(--text)'  },
+    { key:'reserved', label:'予約済', color:'#6f9eff'      },
+    { key:'calling',  label:'呼出中', color:'#f0c040'      },
+    { key:'received', label:'受付済', color:'#34d399'      },
+    { key:'entered',  label:'入場済', color:'#22c589'      },
+    { key:'absent',   label:'不在',   color:'#9ca3af'      },
+    { key:'expired',  label:'失効',   color:'#e5534b'      },
+  ];
+
+  const bar = document.getElementById('summary-bar');
+  bar.innerHTML = '';
+  items.forEach(({ key, label, color }) => {
+    const div = document.createElement('div');
+    div.className = 'sum-card';
+    div.innerHTML = `
+      <div class="num" style="color:${color}">${totals[key]}</div>
+      <div class="lbl">${label}</div>
+    `;
+    bar.appendChild(div);
+  });
+}
+
+// ── タイムスロット一覧 ────────────────────────
+function renderSlots(timeslots) {
+  const list = document.getElementById('slot-list');
+
+  if (timeslots.length === 0) {
+    list.innerHTML = `
+      <div id="empty-state">
+        <div class="empty-icon">📋</div>
+        <p>この時間帯に整理券データがありません</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  timeslots.forEach(sl => {
+    const { startTime, endTime, expireTime, slotStatus, counts } = sl;
+    const isEmpty = counts.total === 0;
+
+    // 表示用の時刻（日付部分を省略: "MM/DD HH:mm" → "HH:mm"）
+    const fmt = t => {
+      if (!t) return '—';
+      // "2025/11/03 14:00" 形式 → "14:00"
+      const m = String(t).match(/(\d{2}:\d{2})$/);
+      return m ? m[1] : t;
+    };
+
+    const card = document.createElement('div');
+    card.className = `slot-card slot-${slotStatus}${isEmpty ? ' empty' : ''}`;
+    card.innerHTML = `
+      <div class="slot-header">
+        <div class="slot-time">${fmt(startTime)} 〜 ${fmt(endTime)}</div>
+        <span class="slot-status-badge badge-${slotStatus}">${slotStatus}</span>
+      </div>
+      <div class="slot-body">
+        <div class="slot-metric">
+          <div class="m-label">予約グループ数</div>
+          <div class="m-value">${counts.total}</div>
+          <div class="m-detail">
+            予約済 ${counts.reserved}
+            ${counts.calling > 0 ? `・呼出中 <span style="color:#f0c040">${counts.calling}</span>` : ''}
+          </div>
+        </div>
+        <div class="slot-metric">
+          <div class="m-label">受付済グループ数</div>
+          <div class="m-value">${counts.received}</div>
+          <div class="m-detail">入場済 ${counts.entered}</div>
+        </div>
+        <div class="slot-metric">
+          <div class="m-label">不在 / 失効</div>
+          <div class="m-value" style="font-size:1.1rem;">
+            ${counts.absent}
+            <span style="color:var(--text3);font-size:0.85rem;"> / </span>
+            ${counts.expired}
+          </div>
+          <div class="m-detail">失効〜 ${fmt(expireTime)}</div>
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+// ============================================================
+// トースト
+// ============================================================
+function toast(msg, type = 'info') {
+  const c  = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className   = 'toast ' + type;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
+</body>
+</html>
