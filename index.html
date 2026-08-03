@@ -294,7 +294,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="register">登録</button>
       <button class="tab-btn" data-tab="checkin">受付</button>
-      <button class="tab-btn" data-tab="stats">統計</button>
+      <a href="stats.html" target="_blank" class="tab-btn" style="text-decoration:none;">統計</a>
     </div>
 
     <!-- ===== 登録タブ ===== -->
@@ -381,19 +381,7 @@
       </div>
     </div>
 
-    <!-- ===== 統計タブ ===== -->
-    <div id="tab-stats" class="tab-panel">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
-        <h2>統計</h2>
-        <button class="btn btn-ghost btn-sm" id="stats-refresh">更新</button>
-      </div>
-
-      <div class="stats-grid" id="stats-grid">
-        <!-- JSで生成 -->
-      </div>
-
-      <p style="font-size:0.78rem; color:var(--text3); text-align:right;" id="stats-updated"></p>
-    </div>
+    <!-- 統計は stats.html（別ページ）で表示 -->
 
   </div><!-- /app -->
 </div><!-- /main-app -->
@@ -510,7 +498,6 @@ function showMainApp() {
   document.getElementById('main-app').style.display = 'block';
   const session = API.getSession();
   document.getElementById('header-sheet').textContent = session.label;
-  loadStats();
 }
 
 document.getElementById('logout-btn').addEventListener('click', () => {
@@ -531,7 +518,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    if (btn.dataset.tab === 'stats') loadStats();
   });
 });
 
@@ -706,7 +692,8 @@ function getAvailableActions(status) {
     ],
     entered:  [],
     absent:   [
-      { key: 'received', label: '受付済', cls: 'btn-success' }
+      { key: 'received', label: '受付済', cls: 'btn-success' },
+      { key: 'expired',  label: '失効',   cls: 'btn-danger'  }
     ],
     expired:  []
   };
@@ -730,51 +717,6 @@ async function changeStatus(newStatus) {
 }
 
 // ============================================================
-// 統計タブ
-// ============================================================
-async function loadStats() {
-  const grid = document.getElementById('stats-grid');
-  grid.innerHTML = '<div style="color:var(--text2);font-size:0.85rem;">読み込み中...</div>';
-  try {
-    const res = await API.getStats();
-    renderStats(res.stats);
-  } catch(e) {
-    grid.innerHTML = `<div class="text-danger" style="font-size:0.85rem;">${e.message}</div>`;
-  }
-}
-
-function renderStats(stats) {
-  const order = ['total','reserved','calling','received','entered','absent','expired'];
-  const labels = {
-    total:    { label: '合計',   color: 'var(--text)'    },
-    reserved: { label: '予約済', color: '#6f9eff'        },
-    calling:  { label: '呼出中', color: '#f0c040'        },
-    received: { label: '受付済', color: '#34d399'        },
-    entered:  { label: '入場済', color: '#22c589'        },
-    absent:   { label: '不在',   color: '#8b91a8'        },
-    expired:  { label: '失効',   color: '#e5534b'        }
-  };
-
-  const grid = document.getElementById('stats-grid');
-  grid.innerHTML = '';
-  order.forEach(key => {
-    if (stats[key] === undefined) return;
-    const { label, color } = labels[key];
-    const div = document.createElement('div');
-    div.className = 'stat-card';
-    div.innerHTML = `
-      <div class="num" style="color:${color}">${stats[key]}</div>
-      <div class="lbl">${label}</div>
-    `;
-    grid.appendChild(div);
-  });
-
-  const now = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  document.getElementById('stats-updated').textContent = `最終更新: ${now}`;
-}
-
-document.getElementById('stats-refresh').addEventListener('click', loadStats);
-
 // ============================================================
 // QRスキャナー
 // ============================================================
