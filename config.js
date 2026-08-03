@@ -52,5 +52,6 @@ const CONFIG = {
 
   APP_TITLE: "整理券システム",
   MONITOR_TITLE: "呼出モニター",
-  ADMIN_TITLE: "管理画面"
+  ADMIN_TITLE: "管理画面",
+  STATS_TITLE: "統計モニター"
 };
